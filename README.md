@@ -1,4 +1,4 @@
-**这些 skill 的生成方式参考** : [《如何创建 SKILL》](../202604/20260421_02.md)  
+**这些 skill 的生成方式参考** : [《如何创建 SKILL》](https://github.com/digoal/blog/tree/master/202604/20260421_02.md)  
   
 ## skill 介绍
   
@@ -7,16 +7,16 @@
 思维筑基
 - `axiom-explainer`: 输入公理/定理/观点, 输出把“观点 / 公理 / 定理 / 理论系统”生成面向学生的中文 Markdown 文章. 参考:
     - 类比人类训练大模型的训练集
-    - [《德说-第100期, 人生最重要的事3: 建立公理体系和逻辑能力》](../202206/20220610_01.md)
-    - [《德说-第477期, 学科分类方法, 如何组建及蒸馏AI核心智囊团》](../202605/20260519_66.md)
-    - [《德说-第474期, 人生最重要的事15: 在快速变化的世界中的生存法则》](../202605/20260515_01.md)  
+    - [《德说-第100期, 人生最重要的事3: 建立公理体系和逻辑能力》](https://github.com/digoal/blog/tree/master/202206/20220610_01.md)
+    - [《德说-第477期, 学科分类方法, 如何组建及蒸馏AI核心智囊团》](https://github.com/digoal/blog/tree/master/202605/20260519_66.md)
+    - [《德说-第474期, 人生最重要的事15: 在快速变化的世界中的生存法则》](https://github.com/digoal/blog/tree/master/202605/20260515_01.md)  
 - `logic-thinker-coach`: 通过向我提问, 用对话方式来训练我的逻辑思维、独立思考的能力, 并对我的回复进行点评, 给出改进意见, 并在接下来的对话中不断进行针对性训练.   
     - 类比人类训练大模型的测试集
   
 财经筑基. 全书已完成 [散户投资小白金融全品种操盘手册 目录](retail-trading-manual-writer/references)     
 - `retail-trading-manual-writer`: 散户投资小白金融全品种操盘手册writer, 输入小结标题和其他参考信息, 输出 以 markdown 格式保存到当前项目的 markdown 目录中.    
   
-数据库筑基. 已完成 [《数据库筑基课 目录》](../202409/20240914_01.md)      
+数据库筑基. 已完成 [《数据库筑基课 目录》](https://github.com/digoal/blog/tree/master/202409/20240914_01.md)      
 - `database-foundation-course-writer`: 数据库筑基课 写作 skill, 输入数据库筑基课的文章标题 以及 相关的参考资料(通常是该篇数据库筑基课相关的技术文档、产品手册、开源项目地址、deepwiki地址、论文地址等). 输出最终 markdown 文件并保存到当前项目 markdown 文件夹中. 例如:  
   ```
   文章标题:
@@ -47,8 +47,8 @@
 - `a-stock-prediction`: 预测某只指定A股的次日走势, 结果输出到当前项目 markdown 目录中.   
   
 深度分析指定股票的开源项目
-- [《TradingAgents: 多 Agent 股票分析与交易决策系统试用》](../202603/20260327_03.md)  
-- [《AI论文解读 | TradingAgents: Multi-Agents LLM Financial Trading Framework》](../202603/20260325_01.md)  
+- [《TradingAgents: 多 Agent 股票分析与交易决策系统试用》](https://github.com/digoal/blog/tree/master/202603/20260327_03.md)  
+- [《AI论文解读 | TradingAgents: Multi-Agents LLM Financial Trading Framework》](https://github.com/digoal/blog/tree/master/202603/20260325_01.md)  
   
 抓取最近3天新闻, 推演对市场的影响  
 - `investor-news-impact`: 面向投资者, 抓取最近3天内发生的新闻. 总结并推演分析将对哪些行业、上市公司带来何种影响.  
@@ -173,9 +173,9 @@ PostgreSQL 全球开发组核心 comitter Tom Lane
 巴菲特  
 - `buffett`: 巴菲特思想解读股票代码. 来自 https://github.com/agi-now/buffett-skills  
    其他相关项目  
-   - [《把 MiniMax 接入 Claude, 给 TradingAgents 添加 MiniMax 模型供应商支持 玩转股票深度分析》](../202603/20260330_07.md)  
-   - [《TradingAgents: 多 Agent 股票分析与交易决策系统试用》](../202603/20260327_03.md)  
-   - [《AI论文解读 | TradingAgents: Multi-Agents LLM Financial Trading Framework》](../202603/20260325_01.md)  
+   - [《把 MiniMax 接入 Claude, 给 TradingAgents 添加 MiniMax 模型供应商支持 玩转股票深度分析》](https://github.com/digoal/blog/tree/master/202603/20260330_07.md)  
+   - [《TradingAgents: 多 Agent 股票分析与交易决策系统试用》](https://github.com/digoal/blog/tree/master/202603/20260327_03.md)  
+   - [《AI论文解读 | TradingAgents: Multi-Agents LLM Financial Trading Framework》](https://github.com/digoal/blog/tree/master/202603/20260325_01.md)  
   
 张仲景  
 - `zhang-zhongjing-perspective`: 用女娲.skill 蒸馏的医圣张仲景   
@@ -270,7 +270,7 @@ PostgreSQL 问答助手
 - `product-tech-influence-article`: 输入某个产品名称, 将近期新闻整理成文章, 以 markdown 格式保存到当前项目 markdown 目录中. 
   
 生成播客脚本
-- `article-to-podcast-script`: 将文章转换成播客脚本. 输入为文章的 markdown 文件 以及 播客人数(1到4人).  例如: `$article-to-podcast-script 根据 markdown/finance-beginner-explainer-2026-04-22.md 文章, 生成 2 人播客脚本, 字数限定在1000字内, 如果无法完成限定, 请在结尾时引导听众阅读“digoal德哥”公众号发布的文字稿.` . 生成完之后还可以调整文件, 或者生成是告知风格(如犀利、金句频出等) . 然后用这篇文章介绍的方法, 生成播客语音. [《Mac本地生成 播客配音, 想要谁的声音都行, 还能带BGM》](../202604/20260422_02.md)  (非常耗内存, 如果你的播客很长, 建议剪成几篇分开生成, 或者升级内存) 
+- `article-to-podcast-script`: 将文章转换成播客脚本. 输入为文章的 markdown 文件 以及 播客人数(1到4人).  例如: `$article-to-podcast-script 根据 markdown/finance-beginner-explainer-2026-04-22.md 文章, 生成 2 人播客脚本, 字数限定在1000字内, 如果无法完成限定, 请在结尾时引导听众阅读“digoal德哥”公众号发布的文字稿.` . 生成完之后还可以调整文件, 或者生成是告知风格(如犀利、金句频出等) . 然后用这篇文章介绍的方法, 生成播客语音. [《Mac本地生成 播客配音, 想要谁的声音都行, 还能带BGM》](https://github.com/digoal/blog/tree/master/202604/20260422_02.md)  (非常耗内存, 如果你的播客很长, 建议剪成几篇分开生成, 或者升级内存) 
   
 将文章改写成公众号爆款文章  
 - `marketing-wechat-operator`: `微信公众号运营`, 编写爆款文章.  
@@ -286,7 +286,7 @@ PostgreSQL 问答助手
   
 ### [日常] 带娃
 解答作业、举一反三、给出同类试题和答案
-- `student-tutor`: 输入年级, 题目(可能是文字或图片), 以该年级的同学听得懂的方式通俗易懂的解答, 如果有多种解题方式, 请按更能启发学生思维的优先级顺序讲解;  以 markdown 格式的文件输出到当前项目 markdown 目录中; 还要让学生能够举一反三, 根据相关知识点再出几道题目, 答案和详细解题过程输出到另一个 markdown 文件中; 少量非常关键的内容可使用 mermaid 或 svg 图(如果采用 svg 图, 请将其保存到 markdown/svg 目录中, 在文中使用 ![图片描述](svg/英文图片名.svg) 来引用)来提高解释性;
+- `student-tutor`: 输入年级, 题目(可能是文字或图片), 以该年级的同学听得懂的方式通俗易懂的解答, 如果有多种解题方式, 请按更能启发学生思维的优先级顺序讲解;  以 markdown 格式的文件输出到当前项目 markdown 目录中; 还要让学生能够举一反三, 根据相关知识点再出几道题目, 答案和详细解题过程输出到另一个 markdown 文件中; 少量非常关键的内容可使用 mermaid 或 svg 图(如果采用 svg 图, 请将其保存到 markdown/svg 目录中, 在文中使用 `![图片描述](svg/英文图片名.svg)` 来引用)来提高解释性;
   
 ### skill 蒸馏造人 与 skill 进化
 女娲 skill, 造人(蒸馏角色)   
@@ -468,5 +468,5 @@ npx playwright install
   
 如果要把它加入 Codex MCP，需要用你当前环境对应的 MCP 配置命令；从技能内容本身看，只能确定它需要 DeepWiki MCP 能力，不能确定唯一安装方式。  
   
-其他参考: [《珍藏级 - Claude , Codex 使用经验总结》](../202604/20260415_05.md)  
+其他参考: [《Claude , Codex 使用经验总结》](https://github.com/digoal/blog/tree/master/202604/20260415_05.md)  
   
