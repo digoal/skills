@@ -1,0 +1,4 @@
+interface:
+  display_name: "论文通俗解读"
+  short_description: "从论文 PDF 或 PDF URL 生成图文并茂的通俗 Markdown 解读"
+  default_prompt: "使用 $paper-interpretation 解读一篇论文 PDF 或 PDF URL，并将 Markdown 保存到当前项目 markdown 目录。"

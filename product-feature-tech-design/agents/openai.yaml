@@ -1,0 +1,4 @@
+interface:
+  display_name: "功能设计文档生成器"
+  short_description: "把 PRD 转成可独立测试的功能设计文档(开发者/测试/评审)"
+  default_prompt: "Use $product-feature-tech-design to convert a PRD into a detailed functional design document for developers, reviewers, and isolated testers."

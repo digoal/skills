@@ -1,0 +1,4 @@
+interface:
+  display_name: "学生通俗讲解辅导"
+  short_description: "按年级把题目讲到学生听得懂，并生成举一反三练习与详解"
+  default_prompt: "用 $student-tutor 给五年级学生通俗讲解这道题：3/4 + 1/6 等于多少？"

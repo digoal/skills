@@ -1,0 +1,4 @@
+interface:
+  display_name: "未来规划建议书"
+  short_description: "根据个人画像资源与趋势生成可执行规划建议书"
+  default_prompt: "使用 $future-planning-advisor 根据我的背景、资源和目标，生成一份有数据支撑的未来规划建议书并保存为Markdown。"

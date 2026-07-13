@@ -1,0 +1,4 @@
+interface:
+  display_name: "岗位顾问"
+  short_description: "抓取招聘平台信息,按个人特征匹配并按性价比排序,输出 markdown 推荐报告"
+  default_prompt: "根据个人特征(技能、地点、时间、薪资期望),抓取闲鱼/Boss直聘等平台的招聘信息,匹配适合的长期雇佣或临时工机会,按性价比排序,生成 markdown 推荐报告到当前项目 markdown 目录"

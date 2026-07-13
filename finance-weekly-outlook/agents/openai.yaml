@@ -1,0 +1,4 @@
+interface:
+  display_name: "周度金融多空展望"
+  short_description: "基于上游财经文章和权威数据生成中美股行业与个股周度多空操盘报告"
+  default_prompt: "使用 $finance-weekly-outlook 基于最新 daily-finance、finance-core-analysis、finance-explosive-article 产出，生成未来一周覆盖美股和A股的行业与个股多空展望，并保存Markdown。"

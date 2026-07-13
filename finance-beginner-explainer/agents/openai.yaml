@@ -1,0 +1,4 @@
+interface:
+  display_name: "财经小白解读"
+  short_description: "把财经爆款文章拆解成小白可懂的逻辑链条与举例分析课"
+  default_prompt: "使用 $finance-beginner-explainer 解读一篇 finance-explosive-article 文章，并将小白版Markdown保存到当前项目markdown目录。"

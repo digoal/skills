@@ -1,0 +1,129 @@
+/* poster.css — shared styles for blog-cover-poster
+ * Two themes: .theme-dark (deep tech) and .theme-light (minimal).
+ * Set the theme by putting the class on <body>.
+ * Canvas is exactly 1080x1920. Fonts use system Chinese faces (PingFang / Noto).
+ */
+:root {
+  /* dark theme tokens */
+  --d-bg: #0d1117;
+  --d-bg2: #161b22;
+  --d-fg: #e6edf3;
+  --d-muted: #8b949e;
+  --d-accent: #58a6ff;   /* primary highlight */
+  --d-accent2: #ff9d47;  /* secondary / warning-emphasis */
+  --d-line: #30363d;
+
+  /* light theme tokens */
+  --l-bg: #ffffff;
+  --l-bg2: #f5f6f8;
+  --l-fg: #1a1a1a;
+  --l-muted: #6b7280;
+  --l-accent: #2563eb;
+  --l-accent2: #ea580c;
+  --l-line: #e5e7eb;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body { width: 1080px; height: 1920px; }
+
+body {
+  /* OFL-only font stack — safe to ship as part of a public template.
+     - Inter: Latin/numerals (SIL OFL 1.1)
+     - Noto Sans CJK SC / Source Han Sans SC: Simplified Chinese
+       (noto = Google's name; Source Han Sans = Adobe's; both SIL OFL 1.1)
+     - system-ui / sans-serif: generic fallback, not a redistributable font name. */
+  font-family: "Inter", "Noto Sans CJK SC", "Noto Sans SC",
+               "Source Han Sans SC", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+
+/* ---- theme bindings ---- */
+.theme-dark  { background: var(--d-bg); color: var(--d-fg); }
+.theme-light { background: var(--l-bg); color: var(--l-fg); }
+.theme-dark  .muted  { color: var(--d-muted); }
+.theme-light .muted  { color: var(--l-muted); }
+.theme-dark  .accent { color: var(--d-accent); }
+.theme-light .accent { color: var(--l-accent); }
+.theme-dark  .accent2 { color: var(--d-accent2); }
+.theme-light .accent2 { color: var(--l-accent2); }
+
+/* highlight = filled emphasis chip for the single most important term */
+.theme-dark  .hl { background: var(--d-accent); color: #0d1117; }
+.theme-light .hl { background: var(--l-accent); color: #ffffff; }
+.hl { padding: 0 .12em; border-radius: 10px; white-space: nowrap; }
+
+.theme-dark  .hl2 { background: var(--d-accent2); color: #1a1200; }
+.theme-light .hl2 { background: var(--l-accent2); color: #ffffff; }
+.hl2 { padding: 0 .12em; border-radius: 10px; white-space: nowrap; }
+
+/* underline emphasis (lighter weight than a chip) */
+.theme-dark  .ul { box-shadow: inset 0 -0.35em 0 rgba(88,166,255,.28); }
+.theme-light .ul { box-shadow: inset 0 -0.35em 0 rgba(37,99,235,.20); }
+
+/* ---- page frame ---- */
+.page {
+  width: 1080px; height: 1920px;
+  padding: 120px 96px;
+  display: flex; flex-direction: column;
+  position: relative;
+}
+
+/* ===== COVER ===== */
+.cover { justify-content: center; }
+.cover .kicker {
+  font-size: 40px; font-weight: 600; letter-spacing: .08em;
+  text-transform: uppercase; margin-bottom: 40px;
+}
+.cover .title {
+  font-size: 132px; font-weight: 800; line-height: 1.12;
+  letter-spacing: -.01em; word-break: break-word;
+}
+.cover .subtitle {
+  font-size: 52px; font-weight: 500; line-height: 1.4;
+  margin-top: 56px; max-width: 820px;
+}
+.cover .footer {
+  position: absolute; left: 96px; right: 96px; bottom: 110px;
+  font-size: 36px; display: flex; justify-content: space-between; align-items: center;
+}
+
+/* ===== CONTENT ===== */
+.content .index {
+  font-size: 44px; font-weight: 700; letter-spacing: .05em; margin-bottom: 28px;
+}
+.content .heading {
+  font-size: 84px; font-weight: 800; line-height: 1.18; margin-bottom: 64px;
+  word-break: break-word;
+}
+.content .body { font-size: 52px; font-weight: 400; line-height: 1.6; }
+.content .body p { margin-bottom: 40px; }
+
+/* bullet list — each item scannable, emphasis on the lead term */
+.content ul.points { list-style: none; margin-top: 8px; }
+.content ul.points > li {
+  font-size: 50px; line-height: 1.5; padding-left: 64px;
+  position: relative; margin-bottom: 48px;
+}
+.theme-dark  .content ul.points > li::before { color: var(--d-accent); }
+.theme-light .content ul.points > li::before { color: var(--l-accent); }
+.content ul.points > li::before {
+  content: "▹"; position: absolute; left: 0; top: -2px; font-weight: 800;
+}
+.content ul.points > li .lead { font-weight: 700; }
+
+/* big-number callout (stats page) */
+.content .stat { font-size: 220px; font-weight: 800; line-height: 1; letter-spacing: -.02em; }
+.content .stat-label { font-size: 48px; margin-top: 24px; }
+
+/* footer index / brand on content pages */
+.content .pagefoot {
+  position: absolute; left: 96px; right: 96px; bottom: 96px;
+  font-size: 34px; display: flex; justify-content: space-between;
+}
+
+/* top accent rule */
+.rule { height: 10px; width: 120px; border-radius: 10px; margin-bottom: 56px; }
+.theme-dark  .rule { background: var(--d-accent); }
+.theme-light .rule { background: var(--l-accent); }

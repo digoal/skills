@@ -1,0 +1,4 @@
+interface:
+  display_name: "博客封面配图生成"
+  short_description: "基于素材内容生成博客封面图和连贯的核心内容讲解图（1080×1920 PNG）"
+  default_prompt: "根据这份素材，生成一张封面图和若干张核心内容讲解图"

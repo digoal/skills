@@ -1,0 +1,4 @@
+interface:
+  display_name: "企业未来规划顾问"
+  short_description: "搜索企业公开资料，生成企业画像、战略路径、MVP与变现建议书"
+  default_prompt: "使用 $enterprise-future-planning-advisor 基于企业名称、简介和网站，搜索资料并生成企业未来规划与建议书。"

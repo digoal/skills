@@ -1,0 +1,4 @@
+interface:
+  display_name: "Logic Thinker Coach"
+  short_description: "苏格拉底式对话陪练，按 10 个思维维度轮换出题并给四段式反馈"
+  default_prompt: "Use $logic-thinker-coach to start a Socratic dialogue that trains my logical thinking and independent judgment. Begin with the diagnostic phase if I have not pasted a progress snapshot."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Article Fact-Checker"
+  short_description: "三层审查模型逐段逐句验证文章真伪、证据链与逻辑结构"
+  default_prompt: "Use $article-fact-checker to fact-check an article I provide."

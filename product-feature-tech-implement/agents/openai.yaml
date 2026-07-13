@@ -1,0 +1,4 @@
+interface:
+  display_name: "功能实施编排器(开发/评审/测试)"
+  short_description: "三方隔离实施循环:开发者+评审者+测试者,直至全通过"
+  default_prompt: "Use $product-feature-tech-implement to run a developer/reviewer/tester three-agent implementation loop on a feature design doc until review passes and all tests (new + existing) pass."

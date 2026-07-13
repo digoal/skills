@@ -1,0 +1,7 @@
+interface:
+  display_name: "digoal"
+  short_description: "德哥式数据库、AI与开源生态数字员工"
+  default_prompt: "Use $digoal to answer a PostgreSQL, PolarDB, or AI+database question using digoal blog evidence."
+
+policy:
+  allow_implicit_invocation: true

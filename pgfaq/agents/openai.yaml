@@ -1,0 +1,4 @@
+interface:
+  display_name: "pgfaq"
+  short_description: "解答PostgreSQL源码与文档范围内的问题并保存Markdown"
+  default_prompt: "Use $pgfaq to answer a PostgreSQL database question from postgres source/docs and DeepWiki, then save Markdown to the current project markdown directory."

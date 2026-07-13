@@ -1,0 +1,4 @@
+interface:
+  display_name: "Open Source Project Article"
+  short_description: "开源项目搜证分析与深度文章写作流程"
+  default_prompt: "Use $open-source-project-article to analyze an open-source project URL and write a sourced Markdown article."

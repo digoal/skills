@@ -1,2 +1,472 @@
-# skills
-valuable skills for me
+**这些 skill 的生成方式参考** : [《如何创建 SKILL》](../202604/20260421_02.md)  
+  
+## skill 介绍
+  
+### [日常] 打基础
+  
+思维筑基
+- `axiom-explainer`: 输入公理/定理/观点, 输出把“观点 / 公理 / 定理 / 理论系统”生成面向学生的中文 Markdown 文章. 参考:
+    - 类比人类训练大模型的训练集
+    - [《德说-第100期, 人生最重要的事3: 建立公理体系和逻辑能力》](../202206/20220610_01.md)
+    - [《德说-第477期, 学科分类方法, 如何组建及蒸馏AI核心智囊团》](../202605/20260519_66.md)
+    - [《德说-第474期, 人生最重要的事15: 在快速变化的世界中的生存法则》](../202605/20260515_01.md)  
+- `logic-thinker-coach`: 通过向我提问, 用对话方式来训练我的逻辑思维、独立思考的能力, 并对我的回复进行点评, 给出改进意见, 并在接下来的对话中不断进行针对性训练.   
+    - 类比人类训练大模型的测试集
+  
+财经筑基. 全书已完成 [散户投资小白金融全品种操盘手册 目录](retail-trading-manual-writer/references)     
+- `retail-trading-manual-writer`: 散户投资小白金融全品种操盘手册writer, 输入小结标题和其他参考信息, 输出 以 markdown 格式保存到当前项目的 markdown 目录中.    
+  
+数据库筑基. 已完成 [《数据库筑基课 目录》](../202409/20240914_01.md)      
+- `database-foundation-course-writer`: 数据库筑基课 写作 skill, 输入数据库筑基课的文章标题 以及 相关的参考资料(通常是该篇数据库筑基课相关的技术文档、产品手册、开源项目地址、deepwiki地址、论文地址等). 输出最终 markdown 文件并保存到当前项目 markdown 文件夹中. 例如:  
+  ```
+  文章标题:
+    数据库筑基课 - 索引组织表(Index-Organized Table, IOT)
+  项目源码(已克隆到当前项目如下目录中): 
+    orioledb 
+  项目 deepwiki reponame: 
+    orioledb/orioledb
+  项目 codebase:
+    orioledb/CLAUDE.md
+  参考论文: 
+    Oracle8i Index-Organized Table and its Application to New Domains
+    The Ubiquitous B-Tree
+    Efficient Locking for Concurrent Operations on B-Trees
+  ```
+  
+读书笔记  
+- `douban-book-notes`: 输入豆瓣链接, 生成读书笔记.  
+  
+### [日常] 财经类, 日常分析与预测
+市场开局分析  
+- `market-opening-analyst`: 市场开局分析, 分析并预测下一次开市可能会引爆上涨、下跌的行业或标的. 以 markdown 格式图文并茂(采用mermaid、ascii text等图)的输出到当前项目 markdown 目录中.  
+  
+指定美股分析  
+- `us-stock-prediction`: 预测某只指定美股的次日走势, 结果输出到当前项目 markdown 目录中.  
+  
+指定A股分析  
+- `a-stock-prediction`: 预测某只指定A股的次日走势, 结果输出到当前项目 markdown 目录中.   
+  
+深度分析指定股票的开源项目
+- [《TradingAgents: 多 Agent 股票分析与交易决策系统试用》](../202603/20260327_03.md)  
+- [《AI论文解读 | TradingAgents: Multi-Agents LLM Financial Trading Framework》](../202603/20260325_01.md)  
+  
+抓取最近3天新闻, 推演对市场的影响  
+- `investor-news-impact`: 面向投资者, 抓取最近3天内发生的新闻. 总结并推演分析将对哪些行业、上市公司带来何种影响.  
+  
+系列技能: 每日财经事件、深度分析、公众号爆款文章、小白解读、未来一周市场预测  
+- `daily-finance`：每日联网采集并校验高质量财经新闻、市场数据和关键事件，生成可直接发布的公众号财经日报，并作为后续深度分析的事实底稿。  
+- `finance-core-analysis`：基于 `daily-finance` 的事实底稿，再联网复核关键数据，用流动性、利率、风险偏好、资金流、政策和资产负债表模型生成可发布的深度财经分析。  
+- `finance-explosive-article`：基于前两份财经文档和最新外部数据校验，用“第一性原理 + 反直觉 + 系统模型”的德哥风格生成公众号爆款财经文章。  
+- `finance-beginner-explainer`: 基于 `finance-explosive-article` 的文案, 面向小白进行更细致的解读, 必要时会用到 `daily-finance` 和 `finance-core-analysis` 增加证据链完整性.  
+- `finance-weekly-outlook`: 根据daily-finance , finance-core-analysis , finance-explosive-article的产出, 再综合搜索其他相关的关键且权威的高质量数据. 分析未来一周极大概率看涨以及看空的行业和股票.  
+  
+### [日常] 发现世界 bug(商机在哪)、商业模式、产品设计与实现、怎么卖出去  
+抓取行业新闻, 分析并发现BUG和**商机**, 设计解决方案、产品与商业模式
+- `world-bug-opportunity-finder`: 根据我给出的行业名称抓对应行业的热点新闻, 如果我没有给出, 则默认抓热点社会新闻, 找“bug”, 并给解决思路. 将结果整理成图文并茂(包含svg/mermaid/ascii text等图形)的markdown文件保存到当前项目markdown目录中.
+    
+给出行业, 结合热点或者老问题, 提出若干真实、深刻、有讨论张力的好问题
+- `good_ask`: 给你一个行业, 提出与这个行业相关的若干个好问题, 不需要给出解答, 但是要给出好的理由. 
+  
+产品经理, 根据上面发现的BUG和商机, 编写 **BRD, MRD, PRD**.  
+- `write-brd`: 输入 idea, 将 BRD 以 markdown 格式保存到当前项目 markdown 目录中. 
+- `write-mrd`: 输入 idea, 将 MRD 以 markdown 格式保存到当前项目 markdown 目录中. 
+- `write-prd`: 输入 idea, 将 PRD 以 markdown 格式保存到当前项目 markdown 目录中. 
+  
+用HTML做高保真**产品原型**、交互Demo、幻灯片、动画  
+- `huashu-design`: 花叔Design（Huashu-Design） —— 用HTML做高保真原型、交互Demo、幻灯片、动画、设计变体探索+设计方向顾问+专家评审的一体化设计能力。  
+    - https://github.com/alchaincyf/huashu-design
+  
+以开发架构师的角色基于 PRD 文档编写功能设计文档   
+- `product_feature_tech_design`: 输入 PRD 文档, 以开发架构师的角色基于 PRD 文档编写功能设计文档. 下游是开发者、reviewer、测试者, 他们的工作都将基于这份功能设计文档展开, 且互相隔离, 测试不知道开发者写了什么代码, 所以这份文档必须要详细定义清晰. 功能设计文档以 markdown 格式保存到当前项目 markdown 目录中. 
+  
+代码实现  
+- `product_feature_tech_implement`: 基于功能设计文档实现代码、完成代码 review、测试用例的编写、并通过新增测试用例及已有的测试用例. 
+    - 这个任务非常长, 可能会不断因授权打断. 如果你不想被打断, 在启动 Claude CLI 时跳过权限确认，可以通过添加 `--dangerously-skip-permissions` 参数或 `--permission-mode bypassPermissions` 来实现。不过这个操作风险极高，建议把 claude 放在容器内跑.  
+- `其他待补充`: 从单agent到复杂agent协作到团队协作. 参考 claude,codex,ruflo(多agent上下文隔离协作: PD、架构师、coder、reviewer、tester),loop(多agent任务编排管理).   
+  
+市场营销策略
+- `待补充`  
+  
+给开源项目找bug,修复bug, 例如postgres
+- `find_postgres_bug`: 输入postgres源码目录(最好克隆一个稳定版或开发版最新分支)位置, 找bug, 并以 markdown 格式输出标准的给社区上报 bug 的信息.  
+    - 最好在克隆时把近半年的commit信息都克隆过来, 因为越新的提交越容易出现bug.  
+  
+抓取咸鱼、boss直聘、或其他与招聘相关平台发布的内容, 与输入者的特征进行匹配, 给出接活的报告.  
+- `job-advisor`: 输入个人特征和需求(能力、诉求(例如工作地、时长、薪资、是否远程、求职方向等)), 根据个人特征匹配适合接的活(包括长期雇佣、临时工等), 按性价比排序返回结果. 
+    
+### 产业、行业、上市公司、产品深度分析
+产业/行业分析(面向"投行"视角)  
+- `industry-chain-investment-analysis`: 输入一个行业或产业名称, 根据这个行业产业链条的各个节点, 列出各个节点中具有代表性的上市公司, 分析这些企业的商业模式、上下游、核心竞争力, 护城河、风险揭露、竞争情况等. 图文并茂(svg/mermaid/ascii text等图形)的输出 markdown 格式文件, 保存到当前项目 markdown 目录中. 
+  
+产业/行业分析(面向"战略顾问+创业者"视角)  
+- `industry-deep-explainer`: 输入行业名, 快速且通熟易懂的讲透一个行业. 并且分析行业中的商业机会, 将结果以 markdown 格式输出到当前项目的 markdown 目录中.  
+    - 区别于 industry-chain-investment-analysis 和 industry-news-insight, 前者主要针对投行/上市公司, 后者针对公众号文. 本 skill 则定位"战略顾问+创业者"视角. 
+  
+企业财报分析  
+- `financial-report-analysis`: 财报分析, 输入公司财报文件或URL, 输出专业的财报解读文章.  
+  
+产品深度分析  
+- `product-multi-role-analysis`: 分别扮演“用户、投资人、产品经理、市场运营、品牌运营、友商、合作伙伴”这7个角色, 分析这个产品.  
+  
+产品评测报告
+- `product-review-report`: 询问被评测的产品名、产品相关的资料或相关链接(可选项), 要评测的功能点、目标使用场景、要对比的竞品, 站在用户决策者以及使用者两个角度编写评测报告. 
+  例子:  
+  ```
+  /product-review-report 
+  1、被评测的产品名: 
+  powermem, seekdb, oceanbase
+  2、产品相关的资料或相关链接:
+  https://github.com/oceanbase/powermem
+  https://github.com/oceanbase/seekdb
+  https://github.com/oceanbase/oceanbase
+  https://www.powermem.ai/
+  https://www.seekdb.ai/
+  https://en.oceanbase.com/
+  3、要评测的功能点、目标使用场景:
+  面向 AI Agent 的整体解决方案, 围绕“1、AI Agent 在记忆的存储、整理、遗忘、召回, 2、RAG 知识库数据的存储、召回, 3、省LLM token, 4、提高召回精度, 5、提高LLM 回复精度”相关的场景, 这三个产品的综合功能表现.
+  powermem 负责记忆的整理、遗忘
+  seekdb 有嵌入式和单机版, 负责存储数据, 召回数据, 包括embedding、语义搜索、全文检索、混合搜索和reranking. (未来可能支持图)
+  oceanbase 分布式版本, 当 seekdb 嵌入式版本和单机版都无法满足诉求时, 处理更大规模数据量场景
+  先验证上述内容, 如有误或缺失重点请先修正和补齐.
+  4、要对比的竞品: 无
+  ```
+  
+### 未来规划
+大国N年规划、结合个人特点给出顺势而为的分析报告  
+- `state-trend-advisor`: 输入询问者的特点: 擅长的领域、特长、爱好等. 如果没有给出询问者的特点, 就认为你是普通人. 首先抓取并分析国家最近的五年规划、政策文件或近期相关的重大新闻. 面向询问者以“投资、创业方向、商业思路、产品思路、就业择业、学习规划”为目的输出分析报告.   
+    - [西邮CS专业本科生顺势规划](skill_used_example/example1/state-trend-multi-20260611.md)  
+  
+根据个人情况、综合大环境与趋势, 给出人生规划建议书   
+- `future-planning-advisor`: 基于提问者提供的背景、资源等信息. 编写符合提问者的未来规划与建议书. 以 markdown 格式保存到当前项目的 markdown 目录中.  
+  
+根据企业情况、综合大环境与趋势, 给出企业规划建议书  
+- `enterprise-future-planning-advisor`: 基于用户提供的企业名、企业简介、公司网站等信息, 给这家企业编写未来规划与建议书. 以 markdown 格式保存到当前项目的 markdown 目录中. 
+  
+### [日常] 智囊团
+通用问题解答专家  
+- `multi-expert-analyzer`: 通用解答问题专家. 输入任何问题, 分析问题后扮演领域专家, 解答问题. 输出为 markdown 格式, 存储到当前项目 markdown 文件夹中.   
+  
+扮演红蓝队互相辩论的通用问题解答专家. 适合有争议的话题.   
+- `rational-red-blue-debate`: 扮演红蓝队互相辩论的通用解答问题专家. 输入任何问题, 分析问题后扮演领域专家, 解答问题. 输出为 markdown 格式, 存储到当前项目 markdown 文件夹中.  
+  
+鉴别文章真伪, 给出打分和相应内容位置.
+- `article-fact-checker`: 鉴别一篇文章的内容真伪, 细化到每个段落, 每句话, 总体结论.
+  
+马克思  
+- `karl-marx-perspective`: 用女娲.skill 蒸馏的马克思角色.  
+  
+教员  
+- `mao-zedong-perspective`: 用女娲.skill 蒸馏的教员角色.  
+  
+digoal德哥(女娲.skill 蒸馏, 保留了思维方式、方法论等)  
+- `digoal-perspective`: 用女娲.skill 蒸馏的digoal德哥角色.  
+  
+digoal德哥(根据 blog 蒸馏, 更像 RAG 角色)  
+- `digoal`：基于 digoal/德哥博客沉淀，面向 PostgreSQL、AI+数据库、开源生态、技术文章和架构判断，输出证据驱动、场景优先、可验证的德哥式分析与方案。  
+  
+PostgreSQL 全球开发组核心 comitter Tom Lane   
+- `tom-lane-perspective`: 用女娲.skill 蒸馏的 Tom Lane 角色.  
+    - 用法举例: `/tom-lane-perspective 现在就在 postgres 最新分支目录中, 请你用 /find-postgres-bug 的思路来找bug, 当然了, 你是大神, 你肯定有更好的方法, 更快的找到pg bug, 找到后, 按 /find-postgres-bug 的输出格式产出`    
+- `andres-freund-perspective`: 用女娲.skill 蒸馏的 Andres Freund 角色.  
+    - 强项：AIO / Meson / JIT / UUIDv7 / incremental backup / 性能优化决策 / 现代工程实践  
+  
+巴菲特  
+- `buffett`: 巴菲特思想解读股票代码. 来自 https://github.com/agi-now/buffett-skills  
+   其他相关项目  
+   - [《把 MiniMax 接入 Claude, 给 TradingAgents 添加 MiniMax 模型供应商支持 玩转股票深度分析》](../202603/20260330_07.md)  
+   - [《TradingAgents: 多 Agent 股票分析与交易决策系统试用》](../202603/20260327_03.md)  
+   - [《AI论文解读 | TradingAgents: Multi-Agents LLM Financial Trading Framework》](../202603/20260325_01.md)  
+  
+张仲景  
+- `zhang-zhongjing-perspective`: 用女娲.skill 蒸馏的医圣张仲景   
+  
+孙思邈  
+- `sun-simiao-perspective`: 用女娲.skill 蒸馏的药王孙思邈  
+  
+倪海厦  
+- `ni-haixia-perspective`: 用女娲.skill 蒸馏的倪海厦  
+  
+紫微斗数作者罗洪先  
+- `luo-hongxian-perspective`: 用女娲.skill 蒸馏紫微斗数作者罗洪先
+  
+### [日常] 前沿跟进
+开源项目排行榜解读  
+- `github-weekly-trending`: 输入从 `https://github.com/trending?since=weekly&spoken_language_code=` 拷贝的内容, 编写本周热门开源项目文章, 输出到当前项目 markdown 目录中.   
+  
+指定开源项目深度分析  
+- `open-source-project-article`: 输入开源项目地址, 深度分析该开源项目, 输出到当前项目 markdown 目录中.  
+  
+数据库、AI、github、AI paper近一周新闻
+- `db-ai-github-paper-weekly-news`: 抓取并分析如下网站(事关“数据库、AI、github、AI paper”相关的近期新闻)在近1周内发表的内容, 分类总结, 将结果以 markdown 格式图文并茂(内置 mermaid 图提高可读性)输出到当前项目的 markdown 目录中. 
+    - 注意: 有些网站可能要科学上网, 所以启动 claude cli/codex app 时, 建议是有 http proxy.  
+  
+开源项目: TrendRadar, 告别信息过载，AI 舆情监控助手与热点筛选工具！聚合多平台热点 + RSS 订阅，支持关键词精准筛选。  
+- https://github.com/sansan0/TrendRadar
+  
+论文解读  
+- `paper-interpretation`: 输入论文 PDF 或论文 URL , 通俗易懂解读论文. 例如用于解读 AI 论文 https://arxiv.org/abs/2604.14141 https://arxiv.org/abs/2508.02739 
+  ````
+  AI 论文:    
+  - https://huggingface.co/papers/trending
+  - https://huggingface.co/papers    
+  - https://github.com/tensorchord/Awesome-LLMOps    
+      
+  数据库 论文:    
+  - https://github.com/lonng/db-papers    
+      
+  AI4DB 论文:    
+  - https://github.com/LumingSun/ML4DB-paper-list
+  ````
+  
+### [日常] 开源项目问答助手
+从 PostgreSQL 指定提交区间的代码、提交日志中, 分析与DBA、开发者相关的特性
+- `postgres-commit-history-article`: 先进入 postgres 项目目录, 输入 `commitid1 commitid2` , 分析并解读这两个 commitid 中间的所有提交 (也包括这两个 commit), 输出到当前项目 markdown 目录中.
+  
+PostgreSQL 问答助手  
+- `pgfaq`: clone https://github.com/postgres/postgres 源码, 将其作为项目目录. 输入 PostgreSQL 相关的问题, 将回答结果保存到项目目录的 markdown 子目录中. 回答时会参考代码、文档和deepwiki, 并对回答内容正确性进行校验.  
+  
+适合任何开源项目的问答助手  
+- `opensourcefaq`: 解答与开源产品有关的问题. 
+  ```
+  输入: 
+    问题,
+    问题涉及的所有开源项目的源码目录, 
+    deepwiki reponame. 
+  输出内容以 markdown 格式保存到当前项目 markdown 目录中. 
+  ```
+  
+  使用例子
+  ```
+  # 先下载代码, 构建代码框架
+  git clone --depth 1 https://github.com/postgis/postgis
+  cd postgis
+  claude 
+  /init
+  
+  git clone --depth 1 https://github.com/postgres/postgres
+  cd postgres
+  claude 
+  /init
+    
+  问题:
+  
+  如何使用 postgis 做伴随分析, 更确切的说, 数据库里有车辆轨迹, 每个人的轨迹数据, 根据A的轨迹, 如何找出打车的同行人. 
+  开源项目地址 : 
+    /Users/digoal/pgrepo/postgis 
+    /Users/digoal/pgrepo/postgres
+  deepwiki reponame : 
+    postgis/postgis 
+    postgres/postgres
+  ```
+  
+### [日常] 写作素材、播客、公众号 
+消化已有文章后, 从更高维度发现价值并重写  
+- `higher-order-article-writer`: 给出 url 或文章内容, 仔细阅读并消化后, 写一篇更高层次的博弈文章. 
+  
+指定行业, 将近期新闻整理成文章  
+- `industry-news-insight`: 输入某个行业名称, 将近期新闻整理成文章, 以 markdown 格式保存到当前项目 markdown 目录中. 
+  
+指定产品, 将近期新闻整理成“技术影响力”文章.     
+- `product-tech-influence-article`: 输入某个产品名称, 将近期新闻整理成文章, 以 markdown 格式保存到当前项目 markdown 目录中. 
+  
+生成播客脚本
+- `article-to-podcast-script`: 将文章转换成播客脚本. 输入为文章的 markdown 文件 以及 播客人数(1到4人).  例如: `$article-to-podcast-script 根据 markdown/finance-beginner-explainer-2026-04-22.md 文章, 生成 2 人播客脚本, 字数限定在1000字内, 如果无法完成限定, 请在结尾时引导听众阅读“digoal德哥”公众号发布的文字稿.` . 生成完之后还可以调整文件, 或者生成是告知风格(如犀利、金句频出等) . 然后用这篇文章介绍的方法, 生成播客语音. [《Mac本地生成 播客配音, 想要谁的声音都行, 还能带BGM》](../202604/20260422_02.md)  (非常耗内存, 如果你的播客很长, 建议剪成几篇分开生成, 或者升级内存) 
+  
+将文章改写成公众号爆款文章  
+- `marketing-wechat-operator`: `微信公众号运营`, 编写爆款文章.  
+  
+以digoal的人设基于已有内容进行重塑, 适合爆款、口播.  
+- `digoal-read-think-writer`: 首先要克隆 digoal/blog 到 `~` 目录, 因为会挑选已有文章进行模式匹配. 输出URL或文字内容, 输出 markdown/file.md , markdown/svg/file.svg , 基于已有内容进行重塑, 适合爆款、口播.   
+   
+基于提供的内容生成封面及核心内容演讲图(默认为1080\*1920规格)
+- `blog-cover-poster`: 输入文件或相关的素材, 基于提供的内容, 在当前项目的目录中, 输出1张封面图以及若干张连贯的核心内容图用于讲解, 默认尺寸1080\*1920像素, 格式为png格式, 文件命名为 1.png 2.png 3.png ... 10.png 11.png 12.png ... 以此类推. 注意着色、字号要考虑语义和重点突出等要求. 
+  
+微信公众号文章自动创作与发布工具: 从选题搜索、撰写、AI 配图、排版到发布草稿箱, 一条命令搞定。可作为 Claude Code / Codex / Cursor 的 Skill, 也可独立命令行调用。
+- https://github.com/jiji262/wechat-publisher
+  
+### [日常] 带娃
+解答作业、举一反三、给出同类试题和答案
+- `student-tutor`: 输入年级, 题目(可能是文字或图片), 以该年级的同学听得懂的方式通俗易懂的解答, 如果有多种解题方式, 请按更能启发学生思维的优先级顺序讲解;  以 markdown 格式的文件输出到当前项目 markdown 目录中; 还要让学生能够举一反三, 根据相关知识点再出几道题目, 答案和详细解题过程输出到另一个 markdown 文件中; 少量非常关键的内容可使用 mermaid 或 svg 图(如果采用 svg 图, 请将其保存到 markdown/svg 目录中, 在文中使用 ![图片描述](svg/英文图片名.svg) 来引用)来提高解释性;
+  
+### skill 蒸馏造人 与 skill 进化
+女娲 skill, 造人(蒸馏角色)   
+- `huashu-nuwa`: 女娲 skill, 造人(蒸馏) 
+  
+达尔文 skill, 进化 SKILL  
+- `darwin-skill`: 达尔文 skill, 进化 SKILL
+  ```
+  cd ~/.codex/skills
+  git clone --depth 1 https://github.com/alchaincyf/nuwa-skill
+  git clone --depth 1 https://github.com/alchaincyf/darwin-skill
+  
+  cp -r nuwa-skill ~/.claude/skills/
+  cp -r darwin-skill ~/.claude/skills/
+  ```
+  
+-----
+  
+思考:  
+```
+是不是可以包装成一个搞钱专属Claw，实践中逐步完善。
+从发现bug, 到分析商机, 形成产品, 销售闭环。
+发现机会，投资。
+发现匹配的活。
+未来 AI 自己接活干.
+```
+  
+-----
+  
+# SKILL for claude web
+`skills_for_claude_web` 目录中的 skill 仅用于 Claude web 版.
+  
+`.skill` 是 claude web skill 的压缩包.  
+
+### skills
+- `skill-creator`: claude 内置的创建 skill 的技能.  
+  
+- `market-opening-analyst`: 市场开局分析, 分析下一次开市可能会引爆上涨、下跌的行业或标的. 以 markdown 格式图文并茂(采用mermaid、ascii text等图)的输出到当前项目 markdown 目录中.  
+  
+- `us-stock-predictor`: 预测某只指定美股的次日走势, 结果输出到当前项目 markdown 目录中.
+  
+- `a-stock-predictor`: 预测某只指定A股的次日走势, 结果输出到当前项目 markdown 目录中.   
+  
+- `investor-news-impact`: 面向投资者, 抓取最近3天内发生的新闻. 总结并分析推演对哪些行业、上市公司带来哪些影响.  
+  
+- `daily-finance`: 每日联网采集并校验高质量财经新闻、市场数据和关键事件，生成可直接发布的公众号财经日报，并作为后续深度分析的事实底稿。  
+  
+- `finance-core-analysis`: 基于 `daily-finance` 的事实底稿，再联网复核关键数据，用流动性、利率、风险偏好、资金流、政策和资产负债表模型生成可发布的深度财经分析。  
+  
+- `finance-explosive-article`: 基于前两份财经文档和最新外部数据校验，用“第一性原理 + 反直觉 + 系统模型”的德哥风格生成公众号爆款财经文章。  
+  
+- `finance-beginner-explainer`: 基于 `finance-explosive-article` 的文案, 面向小白进行更细致的解读, 必要时会用到 `daily-finance` 和 `finance-core-analysis` 增加证据链完整性.  
+  
+- `finance-weekly-outlook`: 根据daily-finance , finance-core-analysis的产出, 再综合搜索其他相关的关键且权威的高质量数据. 分析未来一周极大概率看涨以及看空的行业和股票.  
+  
+- `trading-manual-writer`: 散户投资小白金融全品种操盘手册writer, 输入小结标题和其他参考信息, 输出 以 markdown 格式保存到当前项目的 markdown 目录中.  
+  
+- `industry-deep-explainer`: 输入行业名, 快速且通熟易懂的讲透一个行业. 并且分析行业中的商业机会, 将结果以 markdown 格式输出到当前项目的 markdown 目录中.    
+    - 区别于 industry-chain-analyst 和 industry-insight-writer, 前者主要针对投行/上市公司, 后者针对公众号文. 本skill则定位"战略顾问+创业者"视角. 
+  
+- `product-multi-role-analysis`: 分别扮演“用户、投资人、产品经理、市场运营、品牌运营、友商、合作伙伴”这7个角色, 分析这个产品.  
+  
+- `paper-interpreter`: 输入论文 PDF 或论文 URL , 通俗易懂解读论文.   
+  
+- `db-foundation-course`: 数据库筑基课 写作 skill, 输入数据库筑基课的文章标题 以及 相关的参考资料(通常是该篇数据库筑基课相关的技术文档、产品手册、开源项目地址、deepwiki地址、论文地址等). 输出最终 markdown 文件.   
+  
+- `financial-report-analyst`: 财报分析, 输入公司财报文件或URL, 输出专业的财报解读文章.  
+  
+- `industry-chain-analyst`: 输入一个行业或产业名称, 根据这个行业产业链条的各个节点, 列出各个节点中具有代表性的上市公司, 分析这些企业的商业模式、上下游、核心竞争力, 护城河、风险揭露、竞争情况等. 图文并茂(svg/mermaid/ascii text等图形)的输出markdown格式文件, 保存到当前项目 markdown 目录中.  
+  
+- `opensourcefaq`: 解答与开源产品有关的问题.
+  ```
+  输入:
+    问题,
+    问题涉及的所有开源项目的源码目录,
+    deepwiki reponame.
+  输出内容以 markdown 格式保存到当前项目 markdown 目录中.
+  ```
+  
+- `book-note-writer`: 输入豆瓣链接, 生成读书笔记.
+
+- `axiom-explainer`: 输入公理/定理/观点, 输出把“观点 / 公理 / 定理 / 理论系统”生成面向学生的中文 Markdown 文章. 参考 [《德说-第100期, 人生最重要的事3: 建立公理体系和逻辑能力》](../202206/20220610_01.md)
+  
+- `logic-thinker-coach`: 通过向我提问, 用对话方式来训练我的逻辑思维、独立思考的能力, 并对我的回复进行点评, 给出改进意见, 并在接下来的对话中不断进行针对性训练.   
+    
+- `personal-planner`: 基于提问者提供的背景、资源等信息. 编写符合提问者的未来规划与建议书. 以 markdown 格式保存到当前项目的 markdown 目录中.  
+    
+- `state-trend-advisor`: 输入询问者的特点: 擅长的领域、特长、爱好等. 如果没有给出询问者的特点, 就认为你是普通人. 首先抓取并分析国家最近的五年规划、政策文件或近期相关的重大新闻. 面向询问者以“投资、创业方向、商业思路、产品思路、就业择业、学习规划”为目的输出分析报告.   
+    - [软件工程师顺势而为例子](skills_for_claude_web/skill_used_example/example1/state_trend_report_20260611_engineer.md)  
+    - [西邮计算机相关专业本科生顺势而为例子](skills_for_claude_web/skill_used_example/example2/state_trend_report_20260611_cs_xupt.md)  
+  
+- `job-advisor`: 输入个人特征和需求(能力、诉求(例如工作地、时长、薪资、是否远程、求职方向等)), 根据个人特征匹配适合接的活(包括长期雇佣、临时工等), 按性价比排序返回结果.   
+    - [例子](skills_for_claude_web/skill_used_example/example3/job-advice-guangzhou-20250616.md)  
+  
+- `enterprise-planner`: 基于用户提供的企业名、企业简介、公司网站等信息, 给这家企业编写未来规划与建议书. 以 markdown 格式保存到当前项目的 markdown 目录中. 
+  
+- `product-neutral-advisor`: 输入某个产品名称, 将近期新闻整理成文章, 以 markdown 格式保存到当前项目 markdown 目录中  
+  
+- `industry-insight-writer`: 输入某个行业名称, 将近期新闻整理成文章, 以 markdown 格式保存到当前项目 markdown 目录中
+  
+- `product-review-report`: 询问被评测的产品名、产品相关的资料或相关链接(可选项), 要评测的功能点、目标使用场景、要对比的竞品, 站在用户决策者以及使用者两个角度编写评测报告. 
+  
+- `podcast-script`: 将文章转换成播客脚本. 输入为文章的 markdown 文件 以及 播客人数(1到4人).  
+  
+- `bug-hunter`: 根据我给出的行业名称抓对应行业的热点新闻, 如果我没有给出, 则默认抓热点社会新闻, 找“bug”, 并给解决思路. 将结果整理成图文并茂(包含svg/mermaid/ascii text等图形)的markdown文件保存到当前项目markdown目录中.
+  
+- `good_ask`: 给你一个行业, 提出与这个行业相关的若干个好问题, 不需要给出解答, 但是要给出好的理由.   
+    
+产品经理, 根据上面发现的BUG和商机, 编写 BRD, MRD, PRD.  
+- `write-brd`: 输入 idea, 将 BRD 以 markdown 格式保存到当前项目 markdown 目录中. 
+- `write-mrd`: 输入 idea, 将 MRD 以 markdown 格式保存到当前项目 markdown 目录中. 
+- `write-prd`: 输入 idea, 将 PRD 以 markdown 格式保存到当前项目 markdown 目录中. 
+  
+以开发架构师角色基于prd编写功能设计文档.
+- `product_feature_tech_design`: 输入 PRD 文档, 以开发架构师的角色基于 PRD 文档编写功能设计文档. 下游是开发者、reviewer、测试者, 他们的工作都将基于这份功能设计文档展开, 且互相隔离, 测试不知道开发者写了什么代码, 所以这份文档必须要详细定义清晰. 功能设计文档以 markdown 格式保存到当前项目 markdown 目录中. 
+  
+代码实现  
+- `product_feature_tech_implement`: 基于功能设计文档实现代码、完成代码 review、测试用例的编写、并通过新增测试用例及已有的测试用例. 
+    - 这个任务非常长, 可能会不断因授权打断. 如果你不想被打断, 在启动 Claude CLI 时跳过权限确认，可以通过添加 `--dangerously-skip-permissions` 参数或 `--permission-mode bypassPermissions` 来实现。不过这个操作风险极高，建议把 claude 放在容器内跑.  
+   
+- `article-rewriter`: 消化内容后, 从更高维度重写. 输入URL或原始内容, 输出markdown到当前项目markdown目录中.  
+  
+- `multi-expert-analyzer`: 通用解答问题专家. 输入任何问题, 分析问题后扮演领域专家, 解答问题. 输出为 markdown 格式, 存储到当前项目 markdown 文件夹中.   
+  
+- `red-blue-debate`: 扮演红蓝队互相辩论的通用解答问题专家(特别适合有争议的话题). 输入任何问题, 分析问题后扮演领域专家, 解答问题. 输出为 markdown 格式, 存储到当前项目 markdown 文件夹中.  
+  
+- `article-fact-checker`: 鉴别一篇文章的内容真伪, 细化到每个段落, 每句话, 总体结论.
+  
+- `db-ai-github-paper-weekly-news`: 抓取并分析如下网站(事关“数据库、AI、github、AI paper”相关的近期新闻)在近1周内发表的内容, 分类总结, 将结果以 markdown 格式图文并茂(内置 mermaid 图提高可读性)输出到当前项目的 markdown 目录中. 
+  
+- `content-humanizer`: 输入内容或文件路径, 分析该内容的人味, 如果低于80%, 则在不改变意思的情况下直接进行改写, 确保改写后的内容人味80%以上, 以 markdown 格式输出到当前项目 markdown 目录中.   
+  
+-----
+
+# 依赖  
+PS: anthropic 内置 SKILL. https://github.com/anthropics/skills  
+  
+在 claude code cli 或 codex cli 中使用这些 skill 时, 可能依赖的一些包或软件.  
+  
+1、  
+  
+```bash  
+pip3 install pymupdf pypdf pdfplumber pdfminer.six  
+```  
+  
+对应关系：  
+  
+- `pymupdf`：提供 `fitz`，用于 PDF 文本和图片提取  
+- `pypdf`：`PyMuPDF` 不可用时的文本提取 fallback  
+- `pdfplumber`：表格候选提取  
+- `pdfminer.six`：`skills_for_claude_web/paper-interpreter` 中明确写了 `pip install pdfminer.six`  
+  
+  
+2、  
+  
+PDF/OCR fallback 工具，`skills/paper-interpretation` 提到扫描 PDF 时可用 OCR 或本地 PDF/image 工具，建议装：  
+  
+```bash  
+brew install poppler tesseract  
+```  
+  
+说明：  
+  
+- `poppler` 提供 `pdftotext`、`pdfinfo`、`pdfimages`  
+- `tesseract` 用于 OCR 扫描型 PDF/图片  
+  
+3、  
+  
+DeepWiki MCP / Node 工具  
+  
+`open-source-project-article` 和 `pgfaq` 依赖 DeepWiki MCP。若本地没有配置，可安装/运行对应 MCP 包：  
+  
+```bash  
+npx --yes @seflless/deepwiki
+
+# 某些依赖 playwright 
+npx playwright install
+```  
+  
+如果要把它加入 Codex MCP，需要用你当前环境对应的 MCP 配置命令；从技能内容本身看，只能确定它需要 DeepWiki MCP 能力，不能确定唯一安装方式。  
+  
+其他参考: [《珍藏级 - Claude , Codex 使用经验总结》](../202604/20260415_05.md)  
+  

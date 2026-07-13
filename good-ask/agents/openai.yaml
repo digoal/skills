@@ -1,0 +1,4 @@
+interface:
+  display_name: "好问题生成器"
+  short_description: "给定一个行业，提出若干真实、深刻、有讨论张力的好问题，只给理由不作解答"
+  default_prompt: "帮我针对新能源汽车行业提出几个好问题"

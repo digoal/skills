@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="poster.css">
+</head>
+<!-- CONTENT TEMPLATE. Copy to the working dir as page-2.html, page-3.html, …
+     Match the cover's body theme class. One idea per page. Choose ONE layout
+     block below (points / paragraph / stat) and delete the others.
+     Emphasis rules:
+       .hl / .hl2  filled chip — at most one per page, the single key term
+       .ul         underline — softer emphasis, use for 1-2 secondary terms
+       .accent     colored text — for lead words in list items
+     Font sizes are pre-tuned; if text overflows 1920px, cut words, don't shrink
+     below the template sizes. -->
+<body class="theme-dark content">
+  <div class="page content">
+    <div class="index accent">01 / 05</div>
+    <div class="heading">语义检索<br>解决了什么<span class="hl2">真问题</span></div>
+
+    <!-- LAYOUT A: scannable points -->
+    <ul class="points">
+      <li><span class="lead accent">同义词失效</span>：关键词搜不到「买车」≈「购车」</li>
+      <li><span class="lead accent">长尾意图</span>：一句话问题匹配不到短标题</li>
+      <li><span class="lead accent">跨语言</span>：中文问题命中英文文档</li>
+    </ul>
+
+    <!-- LAYOUT B: paragraph (delete if unused)
+    <div class="body">
+      <p>传统倒排索引依赖<span class="ul">字面重合</span>，一旦用词不同就召回为零。</p>
+      <p>向量检索把文本压成语义坐标，<span class="hl">意思相近就相邻</span>。</p>
+    </div>
+    -->
+
+    <!-- LAYOUT C: big stat (delete if unused)
+    <div class="stat accent">10×</div>
+    <div class="stat-label muted">长尾查询召回率提升</div>
+    -->
+
+    <div class="pagefoot muted">
+      <span>向量数据库</span>
+      <span>@your_blog</span>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Postgres提交历史解读"
+  short_description: "分析PostgreSQL提交历史；有DBA/开发者价值时生成含已校验示例的公众号文章，否则只返回结论"
+  default_prompt: "使用$postgres-commit-history-article在PostgreSQL仓库中分析commitid1到commitid2之间的提交历史；如有DBA/应用开发者价值，则先查SQL测试、文档或源码校验示例，再生成Markdown文章，否则只返回分析结论。"

@@ -1,0 +1,4 @@
+interface:
+  display_name: "财报深度分析"
+  short_description: "从公司财报URL或文件生成面向普通投资者的专业Markdown解读"
+  default_prompt: "使用 $financial-report-analysis 分析一家公司的财报URL或文件，生成面向普通投资者的Markdown财报解读并保存到当前项目markdown目录。"

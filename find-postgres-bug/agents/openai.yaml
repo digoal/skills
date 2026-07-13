@@ -1,0 +1,4 @@
+interface:
+  display_name: "Find Postgres Bug"
+  short_description: "Poison-build, fuzz, triage & bisect PG crashes"
+  default_prompt: "Use $find-postgres-bug to build a poisoned debug PostgreSQL instance (cassert + cache-discard + -O0), fuzz it with sqlsmith until the backend crashes, triage the core into a minimal repro, git-bisect the introducing commit, and produce a pgsql-bugs-style markdown report (no patch)."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "DB+AI+GH+Paper 周报"
+  short_description: "抓取数据库/AI/GitHub/AI论文近1周新闻并输出图文并茂的 markdown 周报"
+  default_prompt: "生成 db-ai-github-paper-weekly-news 周报：抓取10个数据源近7天内容并以含 mermaid 图的 markdown 形式输出到 markdown/ 目录"

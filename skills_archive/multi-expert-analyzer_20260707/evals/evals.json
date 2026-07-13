@@ -1,0 +1,125 @@
+{
+  "skill_name": "multi-expert-analyzer",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "我一直有个困惑：为什么明明知道熬夜伤身体，第二天也难受，可到了晚上就是控制不住地刷手机不肯睡？这到底是意志力问题还是别的原因？有没有真能改掉的办法？",
+      "expected_output": "跨领域（生理/神经科学 + 心理学/行为科学）多专家分析，各自有草稿、第一性原理、证据、边界、证伪路径；最终一篇面向小白、第一人称、有人味的 final.md，把'意志力 vs 机制'讲透并给出可操作办法，校验点丝滑织入。",
+      "files": [],
+      "assertions": [
+        {
+          "text": "生成了 2 个及以上不同领域的专家草稿 markdown 文件（experts/ 目录下）",
+          "check": "structural"
+        },
+        {
+          "text": "生成了 fact-check.md 和 red-team.md 两份校验文件（review/ 目录下）",
+          "check": "structural"
+        },
+        {
+          "text": "生成了最终合成文章 final.md",
+          "check": "structural"
+        },
+        {
+          "text": "final.md 无合成痕迹：不出现\"专家一/专家1/综合各方/事实核查/红队\"等字样",
+          "check": "grep-absent"
+        },
+        {
+          "text": "final.md 用\"站在……角度/从……来看\"这类措辞带出多领域视角（第一人称、不点名专家）",
+          "check": "content"
+        },
+        {
+          "text": "每份专家草稿都含第一性原理前置条件、适用边界、证明/证伪路径三部分",
+          "check": "content"
+        },
+        {
+          "text": "含图（mermaid/ascii/svg）；若用 SVG 则单独存 .svg 文件并在 md 中引用，未把 SVG 源码内联进 md",
+          "check": "structural"
+        },
+        {
+          "text": "final.md 未用表格罗列第一性原理的前置条件/变量（行文叙述）",
+          "check": "content"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "我一个人做了个还挺好用的小工具（效率类桌面软件），现在纠结到底是开源免费拿来引流、还是干脆直接收费卖。身边人说法完全相反，我拿不定主意。帮我认真分析下。",
+      "expected_output": "跨领域（开源/产品策略 + 商业/经济 + 增长）多专家分析，权威案例支撑（如知名开源商业化案例），讲清各路径成立的前提与适用边界、如何验证；最终 final.md 面向个人开发者、第一人称、通俗，不留合成痕迹。",
+      "files": [],
+      "assertions": [
+        {
+          "text": "生成了 2 个及以上不同领域的专家草稿 markdown 文件（experts/ 目录下）",
+          "check": "structural"
+        },
+        {
+          "text": "生成了 fact-check.md 和 red-team.md 两份校验文件（review/ 目录下）",
+          "check": "structural"
+        },
+        {
+          "text": "生成了最终合成文章 final.md",
+          "check": "structural"
+        },
+        {
+          "text": "final.md 无合成痕迹：不出现\"专家一/专家1/综合各方/事实核查/红队\"等字样",
+          "check": "grep-absent"
+        },
+        {
+          "text": "final.md 用\"站在……角度/从……来看\"这类措辞带出多领域视角（第一人称、不点名专家）",
+          "check": "content"
+        },
+        {
+          "text": "每份专家草稿都含第一性原理前置条件、适用边界、证明/证伪路径三部分",
+          "check": "content"
+        },
+        {
+          "text": "含图（mermaid/ascii/svg）；若用 SVG 则单独存 .svg 文件并在 md 中引用，未把 SVG 源码内联进 md",
+          "check": "structural"
+        },
+        {
+          "text": "final.md 未用表格罗列第一性原理的前置条件/变量（行文叙述）",
+          "check": "content"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "AI 现在都能写代码了，我一个非科班的普通人，还有必要花两三年时间认真学一门编程语言吗？还是说这时间不如花在别的地方？说实话点，别糊弄我。",
+      "expected_output": "跨领域（AI/技术趋势 + 职业规划/教育经济 + 学习科学）多专家分析，基于第一性原理和真实数据/趋势，讲清结论成立的前提、适用人群边界、以及未来怎样验证判断；最终 final.md 诚实、通俗、第一人称、有人味。",
+      "files": [],
+      "assertions": [
+        {
+          "text": "生成了 2 个及以上不同领域的专家草稿 markdown 文件（experts/ 目录下）",
+          "check": "structural"
+        },
+        {
+          "text": "生成了 fact-check.md 和 red-team.md 两份校验文件（review/ 目录下）",
+          "check": "structural"
+        },
+        {
+          "text": "生成了最终合成文章 final.md",
+          "check": "structural"
+        },
+        {
+          "text": "final.md 无合成痕迹：不出现\"专家一/专家1/综合各方/事实核查/红队\"等字样",
+          "check": "grep-absent"
+        },
+        {
+          "text": "final.md 用\"站在……角度/从……来看\"这类措辞带出多领域视角（第一人称、不点名专家）",
+          "check": "content"
+        },
+        {
+          "text": "每份专家草稿都含第一性原理前置条件、适用边界、证明/证伪路径三部分",
+          "check": "content"
+        },
+        {
+          "text": "含图（mermaid/ascii/svg）；若用 SVG 则单独存 .svg 文件并在 md 中引用，未把 SVG 源码内联进 md",
+          "check": "structural"
+        },
+        {
+          "text": "final.md 未用表格罗列第一性原理的前置条件/变量（行文叙述）",
+          "check": "content"
+        }
+      ]
+    }
+  ]
+}

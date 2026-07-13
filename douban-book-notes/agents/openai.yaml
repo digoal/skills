@@ -1,0 +1,4 @@
+interface:
+  display_name: "豆瓣读书笔记"
+  short_description: "从豆瓣链接生成可分享的深度读书笔记"
+  default_prompt: "使用 $douban-book-notes 分析一本书的豆瓣链接，搜索高质量资料并把图文并茂的Markdown读书笔记保存到当前项目markdown目录。"

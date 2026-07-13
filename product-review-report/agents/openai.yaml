@@ -1,0 +1,4 @@
+interface:
+  display_name: "产品评测报告"
+  short_description: "编写产品评测报告：网络核实 → 双视角 → markdown 输出"
+  default_prompt: "请帮我对指定产品做一份评测报告，按 skill 工作流收集信息（产品名、资料、评测功能点、目标场景、竞品），网络核实最新状态后输出图文并茂的 markdown 评测报告到当前项目的 markdown/ 目录。"
