@@ -305,6 +305,9 @@ PostgreSQL 问答助手
   
 ### PostgreSQL 数据库专用 SKILLs  
 [PostgreSQL 数据库专用 SKILLs](postgresql/README.md)  
+  
+### Anthropics 内置 SKILLs
+[Anthropics 内置 SKILLs](anthropics_skills/README.md)     
    
 -----
   

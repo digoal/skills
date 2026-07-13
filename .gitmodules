@@ -1,0 +1,9 @@
+[submodule "nuwa-skill"]
+	path = nuwa-skill
+	url = https://github.com/alchaincyf/nuwa-skill
+[submodule "darwin-skill"]
+	path = darwin-skill
+	url = https://github.com/alchaincyf/darwin-skill
+[submodule "anthropics_skills"]
+	path = anthropics_skills
+	url = https://github.com/anthropics/skills
