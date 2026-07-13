@@ -303,6 +303,9 @@ PostgreSQL 问答助手
   cp -r darwin-skill ~/.claude/skills/
   ```
   
+### PostgreSQL 数据库专用 SKILLs  
+[PostgreSQL 数据库专用 SKILLs](postgresql/README.md)  
+   
 -----
   
 思考:  
