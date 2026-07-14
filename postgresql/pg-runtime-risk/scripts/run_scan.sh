@@ -298,10 +298,82 @@ SELECT n.nspname, c.relname, a.attname,
 FROM pg_attribute a
 JOIN pg_class c ON a.attrelid = c.oid
 JOIN pg_namespace n ON c.relnamespace = n.oid
-WHERE a.atttypid IN ('oid'::regtype, 'lo'::regtype)
+WHERE (a.atttypid = 'oid'::regtype OR a.atttypid = to_regtype('lo'))
   AND a.attnum > 0
   AND NOT a.attisdropped
-  AND n.nspname NOT IN ('pg_catalog','information_schema');
+  AND n.nspname NOT IN ('pg_catalog','information_schema','pg_toast')
+  AND n.nspname NOT LIKE 'pg_toast_temp_%'
+  AND n.nspname NOT LIKE 'pg_temp_%';
+"
+
+# ---------- 第九部分：统计信息过时预警 ----------
+# 采用 pg_stat_user_tables.n_mod_since_analyze（PG 9.4+ 内置计数器，autovacuum 判断是否
+# 触发 autoanalyze 的依据本身），比人工用累计 n_tup_ins/upd/del 估算更准确，且天然在
+# 每次 ANALYZE 后归零，不需要额外基准点。同时读取每张表的 reloptions，识别表级覆盖的
+# autovacuum_analyze_scale_factor / autovacuum_analyze_threshold / autovacuum_enabled，
+# 避免把"业务方特意调整过阈值或禁用了 autovacuum 的表"误判为异常。
+run_query "09_stats_staleness.csv" "
+SELECT
+  n.nspname || '.' || c.relname AS table_name,
+  pg_size_pretty(pg_total_relation_size(c.oid)) AS total_size,
+  c.reltuples::bigint AS reltuples_estimate,
+  t.n_live_tup,
+  t.n_dead_tup,
+  t.n_mod_since_analyze,
+  round(100.0 * t.n_dead_tup / NULLIF(t.n_live_tup + t.n_dead_tup, 0), 2) AS dead_tuple_pct,
+  t.last_analyze,
+  t.last_autoanalyze,
+  eff.autovacuum_enabled,
+  eff.scale_factor AS effective_scale_factor,
+  eff.threshold AS effective_threshold,
+  round((eff.scale_factor * c.reltuples + eff.threshold)::numeric) AS analyze_trigger_rows,
+  round(
+    (100.0 * t.n_mod_since_analyze /
+     NULLIF(eff.scale_factor * c.reltuples + eff.threshold, 0))::numeric
+  , 1) AS pct_of_trigger,
+  CASE WHEN t.last_analyze IS NULL AND t.last_autoanalyze IS NULL
+       THEN '从未分析过' ELSE NULL END AS never_analyzed_flag
+FROM pg_stat_user_tables t
+JOIN pg_class c ON c.oid = t.relid
+JOIN pg_namespace n ON c.relnamespace = n.oid
+CROSS JOIN LATERAL (
+  SELECT
+    COALESCE(
+      (SELECT (regexp_match(opt, 'autovacuum_analyze_scale_factor=([0-9.]+)'))[1]::numeric
+       FROM unnest(COALESCE(c.reloptions, ARRAY[]::text[])) opt
+       WHERE opt LIKE 'autovacuum_analyze_scale_factor=%'),
+      current_setting('autovacuum_analyze_scale_factor')::numeric
+    ) AS scale_factor,
+    COALESCE(
+      (SELECT (regexp_match(opt, 'autovacuum_analyze_threshold=([0-9]+)'))[1]::numeric
+       FROM unnest(COALESCE(c.reloptions, ARRAY[]::text[])) opt
+       WHERE opt LIKE 'autovacuum_analyze_threshold=%'),
+      current_setting('autovacuum_analyze_threshold')::numeric
+    ) AS threshold,
+    COALESCE(
+      (SELECT (regexp_match(opt, 'autovacuum_enabled=(true|false)'))[1]
+       FROM unnest(COALESCE(c.reloptions, ARRAY[]::text[])) opt
+       WHERE opt LIKE 'autovacuum_enabled=%'),
+      'true'
+    ) AS autovacuum_enabled
+) eff
+WHERE c.relkind IN ('r','m','p')
+  AND n.nspname NOT IN ('pg_catalog','information_schema')
+ORDER BY pct_of_trigger DESC NULLS FIRST;
+"
+
+run_query "09_never_analyzed.csv" "
+SELECT n.nspname || '.' || c.relname AS table_name,
+       pg_size_pretty(pg_total_relation_size(c.oid)) AS total_size,
+       t.n_live_tup
+FROM pg_stat_user_tables t
+JOIN pg_class c ON c.oid = t.relid
+JOIN pg_namespace n ON c.relnamespace = n.oid
+WHERE t.last_analyze IS NULL
+  AND t.last_autoanalyze IS NULL
+  AND c.relkind IN ('r','m','p')
+  AND n.nspname NOT IN ('pg_catalog','information_schema')
+ORDER BY pg_total_relation_size(c.oid) DESC;
 "
 
 echo "==> 扫描完成，结果已保存至 $OUTDIR"

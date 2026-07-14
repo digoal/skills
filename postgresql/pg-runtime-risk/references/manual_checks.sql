@@ -29,6 +29,10 @@ JOIN pg_class c ON s.seqrelid = c.oid
 JOIN pg_namespace n ON c.relnamespace = n.oid
 WHERE format_type(s.seqtypid, null) IN ('integer','smallint');
 
+-- A5. 检查 pg_stat_statements 扩展是否已安装（用于第九部分"统计信息过时"验证阶段，
+--     辅助定位高频/劣化查询，进而对其执行 EXPLAIN (ANALYZE, BUFFERS) 做偏差验证）
+SELECT extname, extversion FROM pg_extension WHERE extname = 'pg_stat_statements';
+
 -- =========================================================
 -- (B) 破坏性操作模板 —— 严禁自动执行，仅供用户手动确认后使用
 -- =========================================================
@@ -52,3 +56,18 @@ WHERE format_type(s.seqtypid, null) IN ('integer','smallint');
 --     执行前必须与用户确认具体 pid（来自 06_long_idle_in_transaction.csv），
 --     且需告知：该连接若持有未提交事务，终止后事务会回滚，业务侧可能感知为连接异常断开。
 -- SELECT pg_terminate_backend(<pid>);
+
+-- B6. 手动触发 ANALYZE（当 09_stats_staleness.csv 中某表 pct_of_trigger 已进入警告/严重区间，
+--     或 09_never_analyzed.csv 中出现从未分析过的大表时使用；ANALYZE 本身只读扫描采样、
+--     只写统计目录，不锁表、代价远低于 VACUUM，可在业务高峰期执行，但仍建议避开极端峰值）
+-- ANALYZE VERBOSE <table_name>;
+-- 若同时伴随 dead_tuple_pct 过高（死元组堆积），建议改为：
+-- VACUUM ANALYZE VERBOSE <table_name>;
+
+-- B7. 调低表级 autoanalyze 触发阈值，使高频表的统计信息更及时刷新
+--     （对应 09_stats_staleness.csv 中 effective_scale_factor 明显偏高的大表）
+-- ALTER TABLE <table_name> SET (autovacuum_analyze_scale_factor = 0.01, autovacuum_analyze_threshold = 1000);
+
+-- B8. 若某表因业务方历史原因被显式禁用了 autovacuum（autovacuum_enabled=false），
+--     且确认该表实际仍有写入、需要统计信息保持新鲜，可重新开启（需与业务方确认非刻意归档表）
+-- ALTER TABLE <table_name> RESET (autovacuum_enabled);

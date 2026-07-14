@@ -131,3 +131,39 @@ WAL 目录堆积：若 `total_wal_size_bytes` 超过 `max_wal_size * 2`，判定
 无法在 SQL 层面自动判断大对象是否仍被引用（OID 可能存于任意表的 `oid`/`lo` 类型列，
 也可能仅被应用层记录）。`08_lo_reference_columns.csv` 列出所有可能存放大对象引用的
 候选列，供人工核对；清理前必须由用户二次确认。
+
+## 9. 统计信息过时（对应 09_stats_staleness.csv / 09_never_analyzed.csv）
+
+核心判据是 `pct_of_trigger`（`n_mod_since_analyze / analyze_trigger_rows * 100`）——
+即"自上次 ANALYZE 以来的行变更量"占"触发 autoanalyze 所需行数"的百分比。
+`n_mod_since_analyze` 是 PostgreSQL 自身用于判断是否需要 autoanalyze 的计数器，
+每次 ANALYZE（含 autoanalyze）后自动归零，因此不需要额外估算基准点，比人工用
+`n_tup_ins+n_tup_upd+n_tup_del` 累计值估算更准确。
+
+| 等级 | 条件 |
+|---|---|
+| 🔴 严重 | `never_analyzed_flag = '从未分析过'` 且表非空（`n_live_tup > 0`）；或 `pct_of_trigger > 200%`（远超自动分析阈值仍未触发，说明 autovacuum 可能被阻塞/工作进程不足） |
+| 🟠 警告 | `pct_of_trigger` 在 (100%, 200%] 之间（已达到触发条件，但 autoanalyze 尚未来得及执行，需关注 autovacuum 是否正常运行） |
+| 🟡 关注 | `pct_of_trigger` 在 (50%, 100%] 之间（正在逼近触发阈值） |
+| 🟢 正常 | `pct_of_trigger` ≤ 50% |
+
+判定前需先排除主动配置：
+
+- 若某表 `autovacuum_enabled = false`（业务方显式关闭，常见于超大只读历史表/归档表），
+  即使 `last_autoanalyze` 很久远也不能直接判 🔴，应改为提示"该表已禁用 autovacuum，
+  统计信息不会自动更新，若仍有查询依赖其统计信息选择执行计划，建议业务低峰期手动
+  `ANALYZE`，或确认该表是否已实际停止写入"。
+- `effective_scale_factor` / `effective_threshold` 若与全局 `autovacuum_analyze_scale_factor` /
+  `autovacuum_analyze_threshold` 不同，说明该表已有专门调优（reloptions 覆盖），
+  以表级有效值为准，不要再用全局默认值重新判断。
+
+补充信号：
+
+- `dead_tuple_pct`（死元组占比）过高（如 > 10%~20%）同时叠加统计信息过时时，
+  `reltuples` 可能同时包含大量死元组，导致优化器的行数估算进一步失真，
+  应在报告中将该表标注为"双重风险：统计过时 + 死元组堆积"，并建议 `VACUUM ANALYZE`
+  而非单独 `ANALYZE`。
+- 对报告中标记为 🔴/🟠 的高频/大表，若用户能提供具体查询语句，可用
+  `EXPLAIN (ANALYZE, BUFFERS)` 对比 `rows`（预估）与 `actual rows`（实际）验证：
+  偏差达到数量级（如预估 1000、实际 5 万+）且执行计划出现非预期的 `Seq Scan` 时，
+  基本可确认是统计信息过时导致的执行计划劣化，见 SKILL.md 中"执行计划验证"步骤。
