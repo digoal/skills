@@ -236,15 +236,63 @@ SELECT count(*) AS wal_file_count,
 FROM pg_ls_waldir();
 "
 
-# ---------- 第七部分：大对象泄漏预警 ----------
-run_query "07_large_object_summary.csv" "
+# ---------- 第六部分：连接数耗尽预警 ----------
+run_query "06_connection_saturation.csv" "
+SELECT (SELECT setting::int FROM pg_settings WHERE name = 'max_connections') AS max_connections,
+       (SELECT setting::int FROM pg_settings WHERE name = 'superuser_reserved_connections') AS superuser_reserved,
+       count(*) AS current_total,
+       count(*) FILTER (WHERE state = 'active') AS active_count,
+       count(*) FILTER (WHERE state = 'idle') AS idle_count,
+       count(*) FILTER (WHERE state = 'idle in transaction') AS idle_in_tx_count,
+       count(*) FILTER (WHERE state = 'idle in transaction (aborted)') AS idle_in_tx_aborted_count,
+       count(*) FILTER (WHERE wait_event_type = 'Lock') AS waiting_on_lock_count,
+       round(
+         100.0 * count(*) /
+         NULLIF((SELECT setting::int FROM pg_settings WHERE name = 'max_connections'), 0)
+       , 1) AS usage_pct
+FROM pg_stat_activity
+WHERE backend_type = 'client backend';
+"
+
+run_query "06_connection_by_database.csv" "
+SELECT datname, count(*) AS conn_count,
+       count(*) FILTER (WHERE state = 'active') AS active_count,
+       count(*) FILTER (WHERE state LIKE 'idle in transaction%') AS idle_in_tx_count
+FROM pg_stat_activity
+WHERE backend_type = 'client backend' AND datname IS NOT NULL
+GROUP BY datname
+ORDER BY conn_count DESC;
+"
+
+run_query "06_connection_by_user.csv" "
+SELECT usename, count(*) AS conn_count,
+       count(*) FILTER (WHERE state = 'active') AS active_count
+FROM pg_stat_activity
+WHERE backend_type = 'client backend' AND usename IS NOT NULL
+GROUP BY usename
+ORDER BY conn_count DESC;
+"
+
+run_query "06_long_idle_in_transaction.csv" "
+SELECT pid, usename, datname, application_name, client_addr, state,
+       now() - state_change AS idle_duration,
+       now() - xact_start AS xact_duration,
+       left(query, 200) AS last_query
+FROM pg_stat_activity
+WHERE state LIKE 'idle in transaction%'
+ORDER BY state_change ASC
+LIMIT 20;
+"
+
+# ---------- 第八部分：大对象泄漏预警 ----------
+run_query "08_large_object_summary.csv" "
 SELECT count(DISTINCT loid) AS lo_count,
        pg_size_pretty(sum(octet_length(data))) AS total_lo_size,
        sum(octet_length(data)) AS total_lo_size_bytes
 FROM pg_largeobject;
 "
 
-run_query "07_lo_reference_columns.csv" "
+run_query "08_lo_reference_columns.csv" "
 SELECT n.nspname, c.relname, a.attname,
        format_type(a.atttypid, a.atttypmod) AS data_type
 FROM pg_attribute a

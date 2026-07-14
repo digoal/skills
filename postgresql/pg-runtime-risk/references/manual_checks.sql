@@ -1,6 +1,7 @@
 -- pg-runtime-risk / references/manual_checks.sql
 -- 本文件中的查询/命令分为两类：
---   (A) 只读辅助查询 —— 可直接执行，用于补充第六部分单点故障分析
+--   (A) 只读辅助查询 —— 可直接执行，用于补充第七部分单点故障分析
+--       以及第六部分连接数耗尽的按角色排查
 --   (B) 破坏性操作模板 —— 仅作为"建议命令"呈现给用户，
 --       Agent 不得自动执行，必须等待用户明确二次确认后才可运行
 
@@ -35,7 +36,7 @@ WHERE format_type(s.seqtypid, null) IN ('integer','smallint');
 -- B1. 清理未激活的复制槽（会立即释放该槽保留的 WAL，若消费者尚未消费完毕会导致数据丢失）
 -- SELECT pg_drop_replication_slot('要删除的槽名');
 
--- B2. 清理疑似孤立的大对象（执行前必须先通过 07_lo_reference_columns.csv
+-- B2. 清理疑似孤立的大对象（执行前必须先通过 08_lo_reference_columns.csv
 --     人工核对该 OID 是否仍被某张表的 oid/lo 列引用，或被应用层文件路径引用）
 -- SELECT lo_unlink(loid) FROM pg_largeobject_metadata WHERE loid NOT IN (/* 人工确认的在用 OID 列表 */);
 
@@ -46,3 +47,8 @@ WHERE format_type(s.seqtypid, null) IN ('integer','smallint');
 -- B4. 调整 autovacuum_freeze_max_age，使 freeze 更均匀分摊（示例：从默认调低到 10 亿）
 -- ALTER SYSTEM SET autovacuum_freeze_max_age = 1000000000;
 -- SELECT pg_reload_conf();
+
+-- B5. 终止长时间 idle in transaction 的连接（释放连接数、解除对 autovacuum 推进的阻塞）
+--     执行前必须与用户确认具体 pid（来自 06_long_idle_in_transaction.csv），
+--     且需告知：该连接若持有未提交事务，终止后事务会回滚，业务侧可能感知为连接异常断开。
+-- SELECT pg_terminate_backend(<pid>);

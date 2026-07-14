@@ -81,7 +81,34 @@ WAL 目录堆积：若 `total_wal_size_bytes` 超过 `max_wal_size * 2`，判定
 5. 归档失败 → 05_archiver_status.csv 的 failed_count 持续增加
 6. 以上皆非 → 注明"存在未知原因的 WAL 堆积，需人工排查"
 
-## 6. 集群单点故障（需人工交互补充信息，见 SKILL.md 第六部分）
+## 6. 连接数耗尽（对应 06_connection_saturation.csv / 06_connection_by_database.csv / 06_connection_by_user.csv / 06_long_idle_in_transaction.csv）
+
+以 `usage_pct`（`current_total / max_connections`）为主要判据，
+同时结合 `superuser_reserved`（连接耗尽后仅超级用户可登录排障）与
+`idle_in_tx_count`（持有连接但不释放，是耗尽的常见元凶）综合判断：
+
+| 等级 | usage_pct（当前连接数占 max_connections 比例） |
+|---|---|
+| 🔴 严重 | > 90%，或 `current_total` 已逼近 `max_connections - superuser_reserved`（普通用户即将无法新建连接） |
+| 🟠 警告 | > 80% |
+| 🟡 关注 | > 65% |
+| 🟢 正常 | ≤ 65% |
+
+补充判定：
+
+- 若 `idle_in_tx_count`（含 aborted）占 `current_total` 的比例较高（如 > 20%），
+  即使总体 usage_pct 尚未告警，也应单独标注 🟠：应用存在未正确提交/回滚事务、
+  或连接池配置不当，长期可能演变为连接耗尽。
+- `06_long_idle_in_transaction.csv` 中若存在 `idle_duration` 超过数十分钟甚至数小时的记录，
+  按"长事务"单独提示：长时间 `idle in transaction` 不仅占用连接，还会阻塞
+  autovacuum 推进（保留旧的 xmin，间接加剧第 1 节"事务回卷"和第 3 节"冻结风暴"风险），
+  两者关联时需在报告中互相引用。
+- `06_connection_by_database.csv` / `06_connection_by_user.csv` 用于定位连接集中在
+  哪个业务库或哪个账号，便于判断是单一应用异常还是全局性连接池不足。
+- 若使用了外部连接池（如 PgBouncer），`max_connections` 阈值判断的是数据库侧真实连接，
+  而非应用侧连接池连接数，两者不可混淆；报告中应注明"以下判断基于数据库侧实际连接"。
+
+## 7. 集群单点故障（需人工交互补充信息，见 SKILL.md 第七部分）
 
 | 检查项 | 单点风险判定 |
 |---|---|
@@ -93,7 +120,7 @@ WAL 目录堆积：若 `total_wal_size_bytes` 超过 `max_wal_size * 2`，判定
 | 无有效备份（用户回答 + 归档状态） | 🔴 数据丢失风险 |
 | `synchronous_commit` 为 `off`/`local` | 🟡 即使有同步备库也不保证同步 |
 
-## 7. 大对象泄漏（对应 07_large_object_summary.csv）
+## 8. 大对象泄漏（对应 08_large_object_summary.csv）
 
 | 等级 | total_lo_size_bytes |
 |---|---|
@@ -102,5 +129,5 @@ WAL 目录堆积：若 `total_wal_size_bytes` 超过 `max_wal_size * 2`，判定
 | 🟢 正常 | 无或 < 100MB |
 
 无法在 SQL 层面自动判断大对象是否仍被引用（OID 可能存于任意表的 `oid`/`lo` 类型列，
-也可能仅被应用层记录）。`07_lo_reference_columns.csv` 列出所有可能存放大对象引用的
+也可能仅被应用层记录）。`08_lo_reference_columns.csv` 列出所有可能存放大对象引用的
 候选列，供人工核对；清理前必须由用户二次确认。
