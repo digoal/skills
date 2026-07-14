@@ -1,5 +1,14 @@
 **这些 skill 的生成方式参考** : [《如何创建 SKILL》](https://github.com/digoal/blog/tree/master/202604/20260421_02.md)  
   
+submodules
+```
+# 1. 先浅克隆到目标目录
+git clone --depth 1 https://github.com/author/project.git path/to/subdirectory
+
+# 2. 再把它注册为子模块
+git submodule add https://github.com/author/project.git path/to/subdirectory
+```
+  
 ## skill 介绍
   
 ### [日常] 打基础
@@ -308,7 +317,10 @@ PostgreSQL 问答助手
   
 ### Anthropics 内置 SKILLs
 [Anthropics 内置 SKILLs](anthropics_skills/README.md)     
-   
+  
+### 规范 CLAUDE.md
+[andrej-karpathy-skills](andrej-karpathy-skills/README.md)  
+     
 -----
   
 思考:  

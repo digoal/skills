@@ -7,3 +7,6 @@
 [submodule "anthropics_skills"]
 	path = anthropics_skills
 	url = https://github.com/anthropics/skills
+[submodule "andrej-karpathy-skills"]
+	path = andrej-karpathy-skills
+	url = https://github.com/multica-ai/andrej-karpathy-skills
