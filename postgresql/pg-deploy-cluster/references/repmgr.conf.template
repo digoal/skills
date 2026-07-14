@@ -1,0 +1,20 @@
+# repmgr.conf.template
+# 由 scripts/06_deploy_repmgr.sh 渲染，占位符会被替换为实际值。
+
+node_id=__NODE_ID__
+node_name='__NODE_NAME__'
+conninfo='host=__THIS_IP__ port=__PG_PORT__ user=repmgr dbname=repmgr connect_timeout=5'
+data_directory='__PG_DATA_DIR__'
+
+# 自动故障转移相关（仅当启用 repmgrd 时生效）
+failover=automatic
+promote_command='repmgr standby promote -f /etc/repmgr.conf --log-to-file'
+follow_command='repmgr standby follow -f /etc/repmgr.conf --log-to-file --upstream-node-id=%n'
+
+# 监控与日志
+monitoring_history=yes
+log_file='/var/log/repmgr/repmgr.log'
+log_level=INFO
+
+# 建议：若无 witness 节点，failover 判定容易受网络分区影响产生误判，
+# 生产环境建议至少部署 witness 节点或 3 个可投票的观察点。

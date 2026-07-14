@@ -1,0 +1,10 @@
+# pg_hba.conf.template
+# 增量条目模板，由 scripts/03_configure_pg.sh 生成实际值后追加到 pg_hba.conf。
+# 原则：最小权限——只放通复制用户和管理用户所需的具体网段，不使用 0.0.0.0/0。
+#
+# TYPE  DATABASE        USER            ADDRESS                 METHOD
+host    replication     replicator      <REPLICA_OR_MGMT_CIDR>  scram-sha-256
+host    all             postgres        <MGMT_CIDR>              scram-sha-256
+
+# 如需为应用放通业务库连接，按下面格式追加，并将 <APP_CIDR> 替换为实际应用网段：
+# host    <app_db>        <app_user>      <APP_CIDR>               scram-sha-256

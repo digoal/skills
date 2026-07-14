@@ -1,0 +1,58 @@
+# patroni.yml.template
+# 由 scripts/05_deploy_patroni.sh 渲染，占位符会被替换为实际值。
+# 渲染后文件权限应为 600，仅 postgres 用户可读，因其中包含数据库密码。
+
+scope: __SCOPE__
+name: __NODE_NAME__
+
+restapi:
+  listen: __THIS_IP__:__API_PORT__
+  connect_address: __THIS_IP__:__API_PORT__
+
+etcd3:
+  hosts: __ETCD_HOSTS__
+
+bootstrap:
+  dcs:
+    ttl: 30
+    loop_wait: 10
+    retry_timeout: 10
+    maximum_lag_on_failover: 1048576
+    postgresql:
+      use_pg_rewind: true
+      use_slots: true
+      parameters:
+        wal_level: replica
+        max_wal_senders: 10
+        max_replication_slots: 10
+        wal_keep_size: 1024MB
+
+  initdb:
+    - encoding: UTF8
+    - data-checksums
+
+  pg_hba:
+    - host replication replicator 0.0.0.0/0 scram-sha-256
+    - host all all 0.0.0.0/0 scram-sha-256
+    # 注意：上述示例为方便渲染的宽松规则，正式环境请按 references 中的最小权限原则
+    # 收紧为具体的从库/管理网段 CIDR，而非 0.0.0.0/0。
+
+postgresql:
+  listen: __THIS_IP__:__PG_PORT__
+  connect_address: __THIS_IP__:__PG_PORT__
+  data_dir: __PG_DATA_DIR__
+  bin_dir: __PG_BIN_DIR__
+  pgpass: /tmp/pgpass_patroni
+  authentication:
+    replication:
+      username: replicator
+      password: __PGREPLPW__
+    superuser:
+      username: postgres
+      password: __PGSUPERPW__
+
+tags:
+  nofailover: false
+  noloadbalance: false
+  clonefrom: false
+  nosync: false
