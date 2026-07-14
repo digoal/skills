@@ -319,7 +319,7 @@ PostgreSQL 问答助手
 [Anthropics 内置 SKILLs](anthropics_skills/README.md)     
   
 ### 规范 CLAUDE.md
-[andrej-karpathy-skills](andrej-karpathy-skills/README.md)  
+[andrej-karpathy-skills](https://github.com/multica-ai/andrej-karpathy-skills)  
      
 -----
   
