@@ -93,10 +93,10 @@ find-postgres-bug、pg-parameter-tuning-advisor、pg-sql-tuning-advisor
 ```markdown
 ## 输出规范
 
-本技能的最终报告须遵循 _shared/diagnostic-output-contract.md 定义的输出结构，
+本技能的最终报告须遵循 ../_shared/diagnostic-output-contract.md 定义的输出结构，
 可根据本技能特点增补章节，但不可删减或简化"结论/逻辑推演/证据链/证据权威性/
 边界/前提条件/前提变化后新结论/置信度/建议动作/未覆盖点"这些必选部分。
 ```
 
-建议将本文件放置于共享目录（如 `_shared/diagnostic-output-contract.md`），
+建议将本文件放置于共享目录（如 `skills/_shared/diagnostic-output-contract.md`），
 各技能通过引用而非复制，确保契约迭代时全部技能自动同步。

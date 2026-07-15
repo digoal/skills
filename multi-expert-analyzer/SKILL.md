@@ -384,7 +384,7 @@ SVG 文件（如有）：{工作目录}/markdown/svg/{语义}-yyyymmdd-hh24-mm-s
   
 ## 分析规范
 
-本技能在撰写最终文章前，须先按 _shared/general-analysis-skeleton.md
+本技能在撰写最终文章前，须先按 ../_shared/general-analysis-skeleton.md
 完成内部分析骨架（专家视角、证据分级、反方意见、前提条件等），
 再基于骨架重写为面向读者的第一人称叙事文章。骨架可作为附属产物保存，
 最终文章中的结论性表述均须可回溯至骨架内容。
