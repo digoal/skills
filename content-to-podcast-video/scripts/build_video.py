@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """
 Content to Podcast Video Generator
-Automates: Slide HTML/PNG generation -> TTS Audio -> 1.25x ASS Subtitles -> MP4 Video
+Automates: Slide HTML/PNG generation -> TTS Audio (1.0x normal speed) -> Text-Authoritative ASS Subtitles -> MP4 Video
 """
 
 import os
 import sys
 import re
+import shutil
 import argparse
 import subprocess
 import asyncio
@@ -35,90 +36,176 @@ def auto_select_voice(topic_hint, text_content):
         return VOICE_MAP["tech"]
 
 def ms_to_ass(ms):
-    s, ms = divmod(int(ms), 1000)
+    s, ms = divmod(int(max(0, ms)), 1000)
     m, s = divmod(s, 60)
     h, m = divmod(m, 60)
     cs = ms // 10
     return f"{h}:{m:02d}:{s:02d}.{cs:02d}"
 
-def clean_split(text, max_len=18):
-    text = text.strip()
-    if len(text) <= max_len:
-        return text
-        
-    best_idx = -1
-    for i in range(min(max_len, len(text) - 1), 3, -1):
-        if text[i] in '，；、。！？— ':
-            best_idx = i + (1 if text[i] not in '—' else 0)
-            break
-            
-    if best_idx == -1:
-        words = re.findall(r'[a-zA-Z0-9]+|[\u4e00-\u9fa5]|.', text)
-        line1, line2 = "", ""
-        for w in words:
-            if len(line1) + len(w) <= max_len:
-                line1 += w
-            else:
-                line2 += w
-        return f"{line1.strip()}\\N{line2.strip()}"
-    else:
-        l1 = text[:best_idx].strip()
-        l2 = text[best_idx:].strip()
-        return f"{l1}\\N{l2}" if l2 else l1
+def get_audio_duration_ms(audio_file):
+    """Probes exact audio duration in milliseconds using ffmpeg."""
+    cmd = ["ffmpeg", "-i", audio_file]
+    res = subprocess.run(cmd, capture_output=True, text=True)
+    for line in res.stderr.splitlines():
+        if "Duration:" in line:
+            m = re.search(r"Duration:\s*(\d+):(\d+):(\d+\.\d+)", line)
+            if m:
+                h, mins, secs = m.groups()
+                return (int(h) * 3600 + int(mins) * 60 + float(secs)) * 1000
+    return 0.0
 
-async def generate_audio_and_ass(script_text, voice, out_audio, out_ass, speed_factor=1.25):
-    print(f"🎙️ Generating TTS audio with voice [{voice}] (Normal speed 1.0x)...")
+def calc_text_weight(text):
+    """Calculates phonetic/reading duration weight for a given text snippet."""
+    weight = 0.0
+    cjk_count = len(re.findall(r'[\u4e00-\u9fa5]', text))
+    weight += cjk_count * 1.0
+    eng_words = re.findall(r'[a-zA-Z0-9]+', text)
+    weight += len(eng_words) * 1.2
+    pauses_major = len(re.findall(r'[。！？\n]', text))
+    pauses_minor = len(re.findall(r'[，；：,;:]', text))
+    weight += pauses_major * 1.5 + pauses_minor * 0.8
+    return max(0.5, weight)
+
+def smart_format_subtitle(text, max_line_len=15):
+    """
+    Formats subtitle text into 1-3 lines separated by \\N.
+    Breaks cleanly at spaces, punctuation, or CJK boundaries without breaking English words in half.
+    Strips trailing periods for cleaner visual output on mobile slides.
+    """
+    text = text.strip().rstrip("。")
+    if not text:
+        return ""
+    
+    if len(text) <= max_line_len:
+        return text
+
+    tokens = []
+    curr_token = ""
+    for char in text:
+        if ord(char) > 0x2FFF or char in ' \t\n,.:;!?，。！？；、':
+            if curr_token:
+                tokens.append(curr_token)
+                curr_token = ""
+            tokens.append(char)
+        else:
+            curr_token += char
+    if curr_token:
+        tokens.append(curr_token)
+
+    lines = []
+    curr_line = ""
+    for tok in tokens:
+        if len(curr_line) + len(tok) <= max_line_len:
+            curr_line += tok
+        else:
+            if curr_line:
+                lines.append(curr_line.strip())
+            curr_line = tok.lstrip()
+    if curr_line:
+        lines.append(curr_line.strip())
+
+    if len(lines) > 3:
+        l1 = ' '.join(lines[:1])
+        l2 = ' '.join(lines[1:2])
+        l3 = ' '.join(lines[2:])
+        return f"{l1}\\N{l2}\\N{l3}"
+    return "\\N".join(lines)
+
+def split_sentence_into_subcues(text, start_ms, end_ms, max_chunk_len=24):
+    """
+    If a sentence is long, splits it into smaller balanced sub-cues mapped cleanly over [start_ms, end_ms].
+    """
+    text = text.strip()
+    if not text or len(text) <= max_chunk_len:
+        return [(text, start_ms, end_ms)]
+    
+    raw_clauses = [c for c in re.split(r'([，。！？；:\n,!?])', text) if c]
+    clauses = []
+    curr = ""
+    for c in raw_clauses:
+        curr += c
+        if c in '，。！？；:\n,!?':
+            clauses.append(curr.strip())
+            curr = ""
+    if curr.strip():
+        clauses.append(curr.strip())
+
+    chunks = []
+    curr_chunk = ""
+    for cl in clauses:
+        if not curr_chunk:
+            curr_chunk = cl
+        elif len(curr_chunk) + len(cl) <= max_chunk_len:
+            curr_chunk += (" " if (curr_chunk[-1].isascii() and cl[0].isascii()) else "") + cl
+        else:
+            chunks.append(curr_chunk)
+            curr_chunk = cl
+    if curr_chunk:
+        chunks.append(curr_chunk)
+
+    weights = [calc_text_weight(c) for c in chunks]
+    total_w = sum(weights)
+    if total_w == 0:
+        return [(text, start_ms, end_ms)]
+
+    duration = end_ms - start_ms
+    res = []
+    c_start = start_ms
+    for idx, (c, w) in enumerate(zip(chunks, weights)):
+        c_dur = duration * (w / total_w) if idx < len(chunks) - 1 else (end_ms - c_start)
+        c_end = c_start + c_dur
+        res.append((c, c_start, c_end))
+        c_start = c_end
+    return res
+
+async def generate_audio_and_ass(script_text, voice, out_audio, out_ass):
+    print(f"🎙️ Generating TTS audio with voice [{voice}] (Normal 1.0x speed)...")
     communicate = edge_tts.Communicate(script_text, voice, rate="+0%", pitch="+0Hz")
-    sub_maker = edge_tts.SubMaker()
 
     with open(out_audio, "wb") as audio_f:
         async for chunk in communicate.stream():
             if chunk["type"] == "audio":
                 audio_f.write(chunk["data"])
-            elif chunk["type"] in ("WordBoundary", "SentenceBoundary"):
-                sub_maker.feed(chunk)
 
-    print("📝 Building 1.25x speed-adjusted ASS subtitles...")
-    dialogues = []
-    
-    # Process sub_maker cues
-    for cue in sub_maker.cues:
-        start_ms = cue.start / 10000 / speed_factor  # 100ns units to ms, scaled by 1.25
-        end_ms = cue.end / 10000 / speed_factor
-        text = cue.text.strip()
-        text = text.replace("——", "—— ")
-        
-        # Split long clauses
-        clauses = [c.strip() for c in re.split(r'([，；。！？])', text) if c.strip()]
-        chunks = []
+    print("📝 Generating text-authoritative 100% complete ASS subtitles...")
+    total_audio_ms = get_audio_duration_ms(out_audio)
+    if total_audio_ms <= 0:
+        total_audio_ms = 10000.0
+
+    # Extract 100% complete sentences directly from script_text (Source of Truth)
+    raw_lines = [l.strip() for l in script_text.split("\n") if l.strip()]
+    sentences = []
+    for line in raw_lines:
+        clauses = [s.strip() for s in re.split(r'([。！？\n])', line) if s.strip()]
         curr = ""
-        for item in clauses:
-            if item in '，；。！？':
-                curr += item
-                if len(curr) >= 10:
-                    chunks.append(curr)
-                    curr = ""
-            else:
-                if len(curr) + len(item) > 20:
-                    if curr: chunks.append(curr)
-                    curr = item
-                else:
-                    curr += item
-        if curr: chunks.append(curr)
-        if not chunks: chunks = [text]
+        for s in clauses:
+            curr += s
+            if s in '。！？\n':
+                sentences.append(curr)
+                curr = ""
+        if curr:
+            sentences.append(curr)
+
+    weights = [calc_text_weight(s) for s in sentences]
+    total_weight = sum(weights) or 1.0
+
+    dialogues = []
+    curr_start = 0.0
+    for idx, (sent, w) in enumerate(zip(sentences, weights)):
+        dur = total_audio_ms * (w / total_weight) if idx < len(sentences) - 1 else (total_audio_ms - curr_start)
+        curr_end = curr_start + dur
         
-        total_len = sum(len(c) for c in chunks)
-        duration = end_ms - start_ms
-        curr_start = start_ms
-        
-        for idx, chunk in enumerate(chunks):
-            chunk_len = len(chunk)
-            curr_end = end_ms if idx == len(chunks)-1 else curr_start + (duration * (chunk_len / total_len))
-            formatted = clean_split(chunk, max_len=18)
-            s_ass = ms_to_ass(curr_start)
-            e_ass = ms_to_ass(curr_end)
+        # Sub-divide long sentences for clean vertical readability
+        sub_cues = split_sentence_into_subcues(sent, curr_start, curr_end)
+        for chunk_txt, s_ms, e_ms in sub_cues:
+            formatted = smart_format_subtitle(chunk_txt, max_line_len=15)
+            if not formatted:
+                continue
+            s_ass = ms_to_ass(s_ms)
+            e_ass = ms_to_ass(e_ms)
             dialogues.append(f"Dialogue: 0,{s_ass},{e_ass},Default,,0,0,0,,{formatted}")
-            curr_start = curr_end
+
+        curr_start = curr_end
 
     # ASS Header for 1080x1920 with bottom reserved subtitle zone
     ass_header = """[Script Info]
@@ -132,7 +219,7 @@ PlayResY: 1920
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: Default,PingFang SC,32,&H00FFFFFF,&H000000FF,&H00000000,&HA0080B15,1,0,0,0,100,100,0,0,3,10,0,2,90,90,110,1
+Style: Default,PingFang SC,42,&H00FFFFFF,&H000000FF,&H00000000,&HA0080B15,1,0,0,0,100,100,0,0,3,10,0,2,60,60,100,1
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
@@ -140,89 +227,108 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
     with open(out_ass, "w", encoding="utf-8") as f:
         f.write(ass_header + "\n".join(dialogues))
         
-    print(f"✓ Audio saved: {out_audio}")
-    print(f"✓ ASS Subtitles saved: {out_ass} ({len(dialogues)} cues)")
+    print(f"✓ Audio saved: {out_audio} ({total_audio_ms/1000:.1f}s)")
+    print(f"✓ ASS Subtitles saved: {out_ass} ({len(dialogues)} cues, 100% script text covered)")
 
-def build_concat_file(num_slides, out_dir):
+def build_concat_file(num_slides, out_dir, seconds=6):
     concat_path = os.path.join(out_dir, "concat.txt")
     lines = []
-    # Loop slides (3 seconds each) for ~30 cycles (~90 slides = ~270 seconds)
-    for _ in range(40):
+    cycles = max(1, int(3600 / (num_slides * seconds)) + 1)
+    for _ in range(cycles):
         for i in range(1, num_slides + 1):
             lines.append(f"file '{os.path.join(out_dir, f'{i}.png')}'")
-            lines.append("duration 3")
+            lines.append(f"duration {seconds}")
     lines.append(f"file '{os.path.join(out_dir, f'{num_slides}.png')}'")
-    
+
     with open(concat_path, "w", encoding="utf-8") as f:
         f.write("\n".join(lines))
     return concat_path
 
-def render_video(concat_file, audio_path, ass_path, output_mp4, speed_factor=1.25):
-    print("🎬 Rendering MP4 video (Videotoolbox Hardware Accelerated)...")
+def render_video(concat_file, audio_path, ass_path, output_mp4):
+    print("🎬 Rendering MP4 video (Normal speed, 24fps smooth subtitle sampling)...")
     
-    vf_filter = f"scale=1080:1920,format=yuv420p,subtitles='{ass_path}'"
-    af_filter = f"atempo={speed_factor},loudnorm"
+    work_dir = os.path.dirname(os.path.abspath(ass_path))
+    ass_rel = os.path.basename(ass_path)
+    concat_rel = os.path.basename(concat_file)
+    audio_rel = os.path.basename(audio_path)
+    output_rel = os.path.basename(output_mp4)
+    
+    # Prepend fps=24 to the filtergraph so concat demuxer's sparse image frames (e.g. every 6s)
+    # are resampled to a continuous 24fps stream BEFORE entering the subtitles filter.
+    # Without fps=24 first, subtitles filter only samples ASS events on sparse 6s boundaries,
+    # causing all intermediate subtitle dialogues to be silently skipped in the rendered video.
+    vf_filter = f"fps=24,scale=1080:1920,format=yuv420p,subtitles='{ass_rel}'"
+    af_filter = "loudnorm"
     
     cmd = [
         "ffmpeg", "-y",
         "-hwaccel", "videotoolbox",
-        "-f", "concat", "-safe", "0", "-i", concat_file,
-        "-i", audio_path,
+        "-f", "concat", "-safe", "0", "-i", concat_rel,
+        "-i", audio_rel,
         "-vf", vf_filter,
         "-c:v", "h264_videotoolbox", "-b:v", "2M", "-r", "24", "-tag:v", "avc1",
         "-c:a", "aac", "-ar", "44100", "-ac", "2", "-b:a", "128k",
         "-af", af_filter,
         "-shortest",
         "-movflags", "+faststart",
-        output_mp4
+        output_rel
     ]
     
-    res = subprocess.run(cmd, capture_output=True, text=True)
+    res = subprocess.run(cmd, capture_output=True, text=True, cwd=work_dir)
     if res.returncode == 0:
-        print(f"✅ Video render complete: {output_mp4}")
+        print(f"✅ Video render complete: {os.path.join(work_dir, output_rel)}")
     else:
         print(f"⚠️ Videotoolbox failed, retrying with software libx264...")
         cmd_sw = [
             "ffmpeg", "-y",
-            "-f", "concat", "-safe", "0", "-i", concat_file,
-            "-i", audio_path,
+            "-f", "concat", "-safe", "0", "-i", concat_rel,
+            "-i", audio_rel,
             "-vf", vf_filter,
             "-c:v", "libx264", "-preset", "medium", "-crf", "22", "-r", "24",
             "-c:a", "aac", "-ar", "44100", "-ac", "2", "-b:a", "128k",
             "-af", af_filter,
             "-shortest",
             "-movflags", "+faststart",
-            output_mp4
+            output_rel
         ]
-        res_sw = subprocess.run(cmd_sw, capture_output=True, text=True)
+        res_sw = subprocess.run(cmd_sw, capture_output=True, text=True, cwd=work_dir)
         if res_sw.returncode == 0:
-            print(f"✅ Software render complete: {output_mp4}")
+            print(f"✅ Software render complete: {os.path.join(work_dir, output_rel)}")
         else:
             print(f"❌ Render failed: {res_sw.stderr}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Content to Podcast Video Skill Runner")
-    parser.add_argument("--dir", default=os.getcwd(), help="Target working directory")
+    parser.add_argument("--dir", default=None,
+                        help="Working/output directory (default: the --script-file's directory, else cwd)")
     parser.add_argument("--slides", type=int, default=6, help="Number of slide images (1.png .. N.png)")
     parser.add_argument("--topic", default="tech", choices=["tech", "business", "story", "casual"])
     parser.add_argument("--script-file", help="Path to podcast script text file")
     parser.add_argument("--output", default="output.mp4", help="Output MP4 filename")
+    parser.add_argument("--seconds", type=int, default=6, help="Seconds each slide stays on screen")
     
     args = parser.parse_args()
-    
+
+    if shutil.which("ffmpeg") is None:
+        print("❌ ffmpeg not found on PATH. Install it (e.g. `brew install ffmpeg`).")
+        sys.exit(1)
+
+    if not (args.script_file and os.path.exists(args.script_file)):
+        print("Please provide a valid script file via --script-file")
+        sys.exit(1)
+
+    if args.dir is None:
+        args.dir = os.path.dirname(os.path.abspath(args.script_file)) or os.getcwd()
+
     out_audio = os.path.join(args.dir, "podcast.mp3")
     out_ass = os.path.join(args.dir, "podcast.ass")
     out_mp4 = os.path.join(args.dir, args.output)
-    
-    if args.script_file and os.path.exists(args.script_file):
-        with open(args.script_file, "r", encoding="utf-8") as f:
-            script_text = f.read()
-    else:
-        print("Please provide a script file via --script-file")
-        sys.exit(1)
-        
+
+    with open(args.script_file, "r", encoding="utf-8") as f:
+        script_text = f.read()
+
     voice = auto_select_voice(args.topic, script_text)
-    asyncio.run(generate_audio_and_ass(script_text, voice, out_audio, out_ass, speed_factor=1.25))
+    asyncio.run(generate_audio_and_ass(script_text, voice, out_audio, out_ass))
     
-    concat_file = build_concat_file(args.slides, args.dir)
-    render_video(concat_file, out_audio, out_ass, out_mp4, speed_factor=1.25)
+    concat_file = build_concat_file(args.slides, args.dir, seconds=args.seconds)
+    render_video(concat_file, out_audio, out_ass, out_mp4)
