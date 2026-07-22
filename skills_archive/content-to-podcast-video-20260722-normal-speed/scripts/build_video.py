@@ -158,11 +158,11 @@ def split_sentence_into_subcues(text, start_ms, end_ms, max_chunk_len=24):
         c_start = c_end
     return res
 
-async def generate_audio_ass_and_slide_durations(script_text, voice, target_num_slides, out_audio, out_ass, rate="+25%"):
-    print(f"🎙️ Generating TTS audio with voice [{voice}] (Speed {rate})...")
+async def generate_audio_ass_and_slide_durations(script_text, voice, target_num_slides, out_audio, out_ass):
+    print(f"🎙️ Generating TTS audio with voice [{voice}] (Normal 1.0x speed)...")
     clean_script, sentences_info, effective_num_slides = parse_script_and_slides(script_text, target_num_slides)
     
-    communicate = edge_tts.Communicate(clean_script, voice, rate=rate, pitch="+0Hz")
+    communicate = edge_tts.Communicate(clean_script, voice, rate="+0%", pitch="+0Hz")
     boundaries = []
     
     with open(out_audio, "wb") as audio_f:
@@ -356,7 +356,7 @@ def build_concat_file(slide_timing, effective_num_slides, out_dir):
     return concat_path
 
 def render_video(concat_file, audio_path, ass_path, output_mp4):
-    print("🎬 Rendering MP4 video (1.25x speed, 24fps smooth subtitle sampling)...")
+    print("🎬 Rendering MP4 video (Normal speed, 24fps smooth subtitle sampling)...")
     
     work_dir = os.path.dirname(os.path.abspath(ass_path))
     ass_rel = os.path.basename(ass_path)
@@ -412,7 +412,6 @@ if __name__ == "__main__":
     parser.add_argument("--topic", default="tech", choices=["tech", "business", "story", "casual"])
     parser.add_argument("--script-file", help="Path to podcast script text file")
     parser.add_argument("--output", default="output.mp4", help="Output MP4 filename")
-    parser.add_argument("--rate", default="+25%", help="TTS speech rate (default: +25% for 1.25x speed)")
     
     args = parser.parse_args()
 
@@ -436,7 +435,7 @@ if __name__ == "__main__":
 
     voice = auto_select_voice(args.topic, script_text)
     slide_timing, effective_slides = asyncio.run(
-        generate_audio_ass_and_slide_durations(script_text, voice, args.slides, out_audio, out_ass, rate=args.rate)
+        generate_audio_ass_and_slide_durations(script_text, voice, args.slides, out_audio, out_ass)
     )
     
     concat_file = build_concat_file(slide_timing, effective_slides, args.dir)

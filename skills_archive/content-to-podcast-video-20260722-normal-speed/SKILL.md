@@ -8,7 +8,7 @@ description: Converts long-form text or Markdown articles into mobile-optimized 
 This skill automates the complete end-to-end pipeline for converting an article or text document into a vertical (1080x1920) mobile-optimized video featuring:
 1. **Mobile Presentation Slides**: Large, readable vertical cards (1.png, 2.png, ...).
 2. **Reserved Subtitle Area**: Bottom 280px of every slide image left blank/clean for larger subtitles.
-3. **Single-Speaker Podcast**: Conversational script with domain-tailored TTS voice (default 1.25x speed `rate="+25%"`).
+3. **Single-Speaker Podcast**: Conversational script with domain-tailored TTS voice (normal speed 1.0x).
 4. **Text-Authoritative Video Synthesis**: Content-driven slide image display (each image stays on screen exactly while its section is being spoken; no image looping) and high-precision TTS boundary-aligned ASS subtitles.
 
 ---
@@ -54,7 +54,7 @@ This skill automates the complete end-to-end pipeline for converting an article 
   | Business / Product / News | `zh-CN-YunxiNeural` | Male, energetic, natural |
   | Storytelling / Lifestyle / General | `zh-CN-XiaoxiaoNeural` | Female, warm, expressive |
   | Regional / Casual Discussion | `zh-CN-liaoning-XiaobeiNeural` | Female, lively |
-- **Audio Generation**: Run `edge_tts` at **1.25x speed** (`rate="+25%"` by default).
+- **Audio Generation**: Run `edge_tts` at **1.0x normal speed** (`rate="+0%"`).
 
 ### Step 3: High-Precision Subtitle Alignment & ASS Formatting
 - **TTS Sentence Boundary Alignment (Zero Timing Drift)**:
