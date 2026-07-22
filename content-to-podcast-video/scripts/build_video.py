@@ -158,54 +158,87 @@ def split_sentence_into_subcues(text, start_ms, end_ms, max_chunk_len=24):
         c_start = c_end
     return res
 
-async def generate_audio_and_ass(script_text, voice, out_audio, out_ass):
+async def generate_audio_ass_and_slide_durations(script_text, voice, target_num_slides, out_audio, out_ass):
     print(f"🎙️ Generating TTS audio with voice [{voice}] (Normal 1.0x speed)...")
-    communicate = edge_tts.Communicate(script_text, voice, rate="+0%", pitch="+0Hz")
-
+    clean_script, sentences_info, effective_num_slides = parse_script_and_slides(script_text, target_num_slides)
+    
+    communicate = edge_tts.Communicate(clean_script, voice, rate="+0%", pitch="+0Hz")
+    boundaries = []
+    
     with open(out_audio, "wb") as audio_f:
         async for chunk in communicate.stream():
             if chunk["type"] == "audio":
                 audio_f.write(chunk["data"])
+            elif chunk["type"] == "SentenceBoundary":
+                boundaries.append(chunk)
 
-    print("📝 Generating text-authoritative 100% complete ASS subtitles...")
+    print("📝 Generating high-precision ASS subtitles and slide content timings...")
     total_audio_ms = get_audio_duration_ms(out_audio)
     if total_audio_ms <= 0:
         total_audio_ms = 10000.0
 
-    # Extract 100% complete sentences directly from script_text (Source of Truth)
-    raw_lines = [l.strip() for l in script_text.split("\n") if l.strip()]
-    sentences = []
-    for line in raw_lines:
-        clauses = [s.strip() for s in re.split(r'([。！？\n])', line) if s.strip()]
-        curr = ""
-        for s in clauses:
-            curr += s
-            if s in '。！？\n':
-                sentences.append(curr)
-                curr = ""
-        if curr:
-            sentences.append(curr)
-
-    weights = [calc_text_weight(s) for s in sentences]
-    total_weight = sum(weights) or 1.0
-
+    slide_timing = {i: {"start": None, "end": None} for i in range(1, effective_num_slides + 1)}
     dialogues = []
-    curr_start = 0.0
-    for idx, (sent, w) in enumerate(zip(sentences, weights)):
-        dur = total_audio_ms * (w / total_weight) if idx < len(sentences) - 1 else (total_audio_ms - curr_start)
-        curr_end = curr_start + dur
-        
-        # Sub-divide long sentences for clean vertical readability
-        sub_cues = split_sentence_into_subcues(sent, curr_start, curr_end)
-        for chunk_txt, s_ms, e_ms in sub_cues:
-            formatted = smart_format_subtitle(chunk_txt, max_line_len=15)
-            if not formatted:
-                continue
-            s_ass = ms_to_ass(s_ms)
-            e_ass = ms_to_ass(e_ms)
-            dialogues.append(f"Dialogue: 0,{s_ass},{e_ass},Default,,0,0,0,,{formatted}")
 
-        curr_start = curr_end
+    # Map boundaries to sentences & slide indices
+    if boundaries:
+        for idx, b in enumerate(boundaries):
+            s_info = sentences_info[idx] if idx < len(sentences_info) else sentences_info[-1]
+            s_idx = s_info["slide_idx"]
+            s_ms = b["offset"] / 10000.0
+            e_ms = (b["offset"] + b["duration"]) / 10000.0
+
+            if slide_timing[s_idx]["start"] is None:
+                slide_timing[s_idx]["start"] = s_ms
+            slide_timing[s_idx]["end"] = e_ms
+
+            sub_cues = split_sentence_into_subcues(b["text"], s_ms, e_ms)
+            for chunk_txt, chunk_s_ms, chunk_e_ms in sub_cues:
+                formatted = smart_format_subtitle(chunk_txt, max_line_len=15)
+                if not formatted:
+                    continue
+                s_ass = ms_to_ass(chunk_s_ms)
+                e_ass = ms_to_ass(chunk_e_ms)
+                dialogues.append(f"Dialogue: 0,{s_ass},{e_ass},Default,,0,0,0,,{formatted}")
+    else:
+        # Fallback if no boundary events returned
+        weights = [calc_text_weight(s["text"]) for s in sentences_info]
+        total_weight = sum(weights) or 1.0
+        curr_start = 0.0
+        for idx, (s_info, w) in enumerate(zip(sentences_info, weights)):
+            dur = total_audio_ms * (w / total_weight) if idx < len(sentences_info) - 1 else (total_audio_ms - curr_start)
+            curr_end = curr_start + dur
+            s_idx = s_info["slide_idx"]
+            if slide_timing[s_idx]["start"] is None:
+                slide_timing[s_idx]["start"] = curr_start
+            slide_timing[s_idx]["end"] = curr_end
+
+            sub_cues = split_sentence_into_subcues(s_info["text"], curr_start, curr_end)
+            for chunk_txt, s_ms, e_ms in sub_cues:
+                formatted = smart_format_subtitle(chunk_txt, max_line_len=15)
+                if not formatted:
+                    continue
+                s_ass = ms_to_ass(s_ms)
+                e_ass = ms_to_ass(e_ms)
+                dialogues.append(f"Dialogue: 0,{s_ass},{e_ass},Default,,0,0,0,,{formatted}")
+            curr_start = curr_end
+
+    # Normalize slide timings for continuous display without looping
+    if slide_timing[1]["start"] is not None:
+        slide_timing[1]["start"] = 0.0
+    else:
+        slide_timing[1]["start"] = 0.0
+
+    for i in range(1, effective_num_slides):
+        if slide_timing[i + 1]["start"] is not None:
+            slide_timing[i]["end"] = slide_timing[i + 1]["start"]
+        elif slide_timing[i]["end"] is None:
+            slide_timing[i]["end"] = slide_timing[i]["start"] + 5000.0
+
+    slide_timing[effective_num_slides]["end"] = max(
+        slide_timing[effective_num_slides]["end"] or total_audio_ms,
+        total_audio_ms
+    )
 
     # ASS Header for 1080x1920 with bottom reserved subtitle zone
     ass_header = """[Script Info]
@@ -228,17 +261,95 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         f.write(ass_header + "\n".join(dialogues))
         
     print(f"✓ Audio saved: {out_audio} ({total_audio_ms/1000:.1f}s)")
-    print(f"✓ ASS Subtitles saved: {out_ass} ({len(dialogues)} cues, 100% script text covered)")
+    print(f"✓ ASS Subtitles saved: {out_ass} ({len(dialogues)} cues, exact boundary aligned)")
 
-def build_concat_file(num_slides, out_dir, seconds=6):
+    return slide_timing, effective_num_slides
+
+def parse_script_and_slides(script_text, target_num_slides):
+    """
+    Parses script text into slide-associated sentences and produces clean text for TTS.
+    Supports explicit tags like [SLIDE: 1] or fallback sentence/paragraph partitioning.
+    """
+    lines = script_text.splitlines()
+    sentences_info = []
+    current_slide = 1
+    has_explicit_tags = bool(re.search(r'\[SLIDE:\s*\d+\]', script_text, re.IGNORECASE))
+    
+    if has_explicit_tags:
+        for line in lines:
+            line_str = line.strip()
+            if not line_str:
+                continue
+            m = re.match(r'\[SLIDE:\s*(\d+)\]', line_str, re.IGNORECASE)
+            if m:
+                current_slide = int(m.group(1))
+            else:
+                clauses = [s.strip() for s in re.split(r'([。！？\n])', line_str) if s.strip()]
+                curr = ""
+                for s in clauses:
+                    curr += s
+                    if s in '。！？\n':
+                        sentences_info.append({"slide_idx": current_slide, "text": curr})
+                        curr = ""
+                if curr:
+                    sentences_info.append({"slide_idx": current_slide, "text": curr})
+    else:
+        paragraphs = [p.strip() for p in script_text.split("\n\n") if p.strip()]
+        if len(paragraphs) == target_num_slides:
+            for idx, p in enumerate(paragraphs, start=1):
+                clauses = [s.strip() for s in re.split(r'([。！？\n])', p) if s.strip()]
+                curr = ""
+                for s in clauses:
+                    curr += s
+                    if s in '。！？\n':
+                        sentences_info.append({"slide_idx": idx, "text": curr})
+                        curr = ""
+                if curr:
+                    sentences_info.append({"slide_idx": idx, "text": curr})
+        else:
+            all_sents = []
+            for line in lines:
+                line_str = line.strip()
+                if not line_str:
+                    continue
+                clauses = [s.strip() for s in re.split(r'([。！？\n])', line_str) if s.strip()]
+                curr = ""
+                for s in clauses:
+                    curr += s
+                    if s in '。！？\n':
+                        all_sents.append(curr)
+                        curr = ""
+                if curr:
+                    all_sents.append(curr)
+            
+            total_len = sum(len(s) for s in all_sents) or 1
+            cum_len = 0
+            for s in all_sents:
+                s_idx = min(target_num_slides, int(cum_len / total_len * target_num_slides) + 1)
+                sentences_info.append({"slide_idx": s_idx, "text": s})
+                cum_len += len(s)
+
+    clean_script_text = "\n".join(item["text"] for item in sentences_info)
+    max_slide_found = max([item["slide_idx"] for item in sentences_info], default=target_num_slides)
+    effective_num_slides = max(target_num_slides, max_slide_found)
+    
+    return clean_script_text, sentences_info, effective_num_slides
+
+def build_concat_file(slide_timing, effective_num_slides, out_dir):
     concat_path = os.path.join(out_dir, "concat.txt")
     lines = []
-    cycles = max(1, int(3600 / (num_slides * seconds)) + 1)
-    for _ in range(cycles):
-        for i in range(1, num_slides + 1):
-            lines.append(f"file '{os.path.join(out_dir, f'{i}.png')}'")
-            lines.append(f"duration {seconds}")
-    lines.append(f"file '{os.path.join(out_dir, f'{num_slides}.png')}'")
+    print(f"🖼️ Slide Display Timings (Content-Synchronized, No Looping):")
+    for i in range(1, effective_num_slides + 1):
+        st = slide_timing.get(i, {"start": 0.0, "end": 5000.0})
+        start_s = (st["start"] or 0.0) / 1000.0
+        end_s = (st["end"] or start_s + 5.0) / 1000.0
+        dur_s = max(0.5, end_s - start_s)
+        img_file = os.path.join(out_dir, f"{i}.png")
+        lines.append(f"file '{img_file}'")
+        lines.append(f"duration {dur_s:.3f}")
+        print(f"   - Slide {i}.png: {start_s:.2f}s -> {end_s:.2f}s ({dur_s:.2f}s)")
+    
+    lines.append(f"file '{os.path.join(out_dir, f'{effective_num_slides}.png')}'")
 
     with open(concat_path, "w", encoding="utf-8") as f:
         f.write("\n".join(lines))
@@ -253,10 +364,6 @@ def render_video(concat_file, audio_path, ass_path, output_mp4):
     audio_rel = os.path.basename(audio_path)
     output_rel = os.path.basename(output_mp4)
     
-    # Prepend fps=24 to the filtergraph so concat demuxer's sparse image frames (e.g. every 6s)
-    # are resampled to a continuous 24fps stream BEFORE entering the subtitles filter.
-    # Without fps=24 first, subtitles filter only samples ASS events on sparse 6s boundaries,
-    # causing all intermediate subtitle dialogues to be silently skipped in the rendered video.
     vf_filter = f"fps=24,scale=1080:1920,format=yuv420p,subtitles='{ass_rel}'"
     af_filter = "loudnorm"
     
@@ -305,7 +412,6 @@ if __name__ == "__main__":
     parser.add_argument("--topic", default="tech", choices=["tech", "business", "story", "casual"])
     parser.add_argument("--script-file", help="Path to podcast script text file")
     parser.add_argument("--output", default="output.mp4", help="Output MP4 filename")
-    parser.add_argument("--seconds", type=int, default=6, help="Seconds each slide stays on screen")
     
     args = parser.parse_args()
 
@@ -328,7 +434,10 @@ if __name__ == "__main__":
         script_text = f.read()
 
     voice = auto_select_voice(args.topic, script_text)
-    asyncio.run(generate_audio_and_ass(script_text, voice, out_audio, out_ass))
+    slide_timing, effective_slides = asyncio.run(
+        generate_audio_ass_and_slide_durations(script_text, voice, args.slides, out_audio, out_ass)
+    )
     
-    concat_file = build_concat_file(args.slides, args.dir, seconds=args.seconds)
+    concat_file = build_concat_file(slide_timing, effective_slides, args.dir)
     render_video(concat_file, out_audio, out_ass, out_mp4)
+

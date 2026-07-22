@@ -9,7 +9,7 @@ This skill automates the complete end-to-end pipeline for converting an article 
 1. **Mobile Presentation Slides**: Large, readable vertical cards (1.png, 2.png, ...).
 2. **Reserved Subtitle Area**: Bottom 280px of every slide image left blank/clean for larger subtitles.
 3. **Single-Speaker Podcast**: Conversational script with domain-tailored TTS voice (normal speed 1.0x).
-4. **Text-Authoritative Video Synthesis**: 1.0x normal speed, 6-second image looping (configurable via `--seconds`), and 100% complete, perfectly synchronized burned-in ASS subtitles in the bottom reserved area.
+4. **Text-Authoritative Video Synthesis**: Content-driven slide image display (each image stays on screen exactly while its section is being spoken; no image looping) and high-precision TTS boundary-aligned ASS subtitles.
 
 ---
 
@@ -36,6 +36,17 @@ This skill automates the complete end-to-end pipeline for converting an article 
 
 ### Step 2: Podcast Script & Voice Selection
 - **Script Adaptation**: Rewrites technical/long-form text into a natural 3–8 minute conversational single-speaker podcast script.
+- **Slide Mapping Markers**: Insert explicit `[SLIDE: 1]`, `[SLIDE: 2]`, ... markers in `script.txt` corresponding to each generated slide image.
+  ```text
+  [SLIDE: 1]
+  大家好，欢迎收听本期播客。本期我们要讨论的是分布式数据库体系架构。
+
+  [SLIDE: 2]
+  第一部分，存储与计算分离...
+
+  [SLIDE: 3]
+  第二部分，多版本并发控制...
+  ```
 - **Auto Voice Selection Matrix**:
   | Topic / Domain | Voice Code | Characteristics |
   | :--- | :--- | :--- |
@@ -45,13 +56,10 @@ This skill automates the complete end-to-end pipeline for converting an article 
   | Regional / Casual Discussion | `zh-CN-liaoning-XiaobeiNeural` | Female, lively |
 - **Audio Generation**: Run `edge_tts` at **1.0x normal speed** (`rate="+0%"`).
 
-### Step 3: Text-Authoritative Subtitle Time Alignment & ASS Formatting
-- **100% Text-Authoritative Coverage (Zero Missing Characters)**:
-  - Sentences are extracted directly from the podcast script as the absolute source of truth.
-  - Every single character from start to end is included in the subtitle cues.
-- **Syllable-Weighted Time Alignment (Zero Audio Drift)**:
-  - Audio duration is probed directly from the generated MP3 file.
-  - Timestamps are dynamically mapped across the exact audio timeline based on phonetic reading weights and punctuation pause factors.
+### Step 3: High-Precision Subtitle Alignment & ASS Formatting
+- **TTS Sentence Boundary Alignment (Zero Timing Drift)**:
+  - Subtitle timestamps are captured directly from Microsoft Edge TTS engine boundary events (`SentenceBoundary`), eliminating premature or delayed subtitle cues.
+  - Long sentences are sub-divided into balanced multi-line cues strictly within the exact sentence start and end boundaries.
 - **Line Length & Formatting**:
   - Limit lines to max **14–16 Chinese characters** per line (to ensure text stays within 1080px with side margins).
   - Automatically break long clauses across **max 3 lines** (`\N`) when needed.
@@ -66,8 +74,11 @@ This skill automates the complete end-to-end pipeline for converting an article 
   - `MarginV: 100` (positioned in the bottom 280px reserved area).
   - `BorderStyle: 3`, `BackColour: &HA0080B15` (dark semi-transparent capsule box).
 
-### Step 4: Video Encoding & Looping
-- **Looping Mechanism**: Each slide displays for **N seconds** (default 6, set via `--seconds`), looping sequentially (`1.png -> 2.png -> ... -> N.png -> 1.png ...`) until the audio ends. Loop count auto-scales to outlast the audio; `-shortest` trims the tail.
+### Step 4: Content-Driven Video Encoding (No Image Looping)
+- **Content-Synchronized Slide Display**:
+  - Images are **NOT looped**.
+  - Each slide image (`1.png`, `2.png`, ...) is shown **only while speaking that specific page/section's content**.
+  - Slide `i` stays on screen from the speech start of `[SLIDE: i]` until the speech start of `[SLIDE: i+1]` (the last slide remains visible until the podcast ends).
 - **Audio Normalization**: `-af "loudnorm"`.
 - **FFmpeg Hardware Accelerated Encoding (Mac Videotoolbox)**:
   ```bash
@@ -91,10 +102,10 @@ The skill provides two reusable Python scripts in `scripts/`:
 1. `generate_slides.py`: Renders 1080x1920 slide PNGs (`1.png`..`N.png`) from a JSON spec.
    - `python3 scripts/generate_slides.py --dir <out_dir> --spec <spec.json>`
    - Auto-detects Chrome/Chromium/Edge; every slide keeps the bottom 300px subtitle zone clean.
-2. `build_video.py`: TTS audio + text-authoritative ASS subtitles + looped, subtitled MP4.
-   - `python3 scripts/build_video.py --script-file <script.txt> [--dir <d>] [--slides N] [--topic tech] [--seconds 6] [--output output.mp4]`
+2. `build_video.py`: TTS audio + high-precision ASS subtitles + content-driven non-looping subtitled MP4.
+   - `python3 scripts/build_video.py --script-file <script.txt> [--dir <d>] [--slides N] [--topic tech] [--output output.mp4]`
    - `--dir` defaults to the script file's directory (outputs land next to the script).
-   - `--seconds` sets how long each slide stays on screen (default 6). Subtitles are timed to the audio, not the slides, and the loop count auto-scales, with `-shortest` trimming any excess tail.
+   - Automatically parses `[SLIDE: N]` markers in `script.txt` to calculate exact slide display durations.
    - Prechecks that `ffmpeg` is on PATH; falls back to `libx264` if `h264_videotoolbox` fails.
 
 ### Slide Spec JSON (for `generate_slides.py`)
@@ -123,9 +134,8 @@ The skill provides two reusable Python scripts in `scripts/`:
 
 When executing this skill:
 1. Read the input document/markdown file.
-2. Formulate 5–8 key slide topics and write a slide spec JSON + the single-speaker podcast script.
+2. Formulate 5–8 key slide topics and write a slide spec JSON + the single-speaker podcast script formatted with `[SLIDE: 1]`, `[SLIDE: 2]`, ... section tags.
 3. Choose the appropriate TTS voice based on topic (auto-selected by `build_video.py --topic`).
 4. Generate slides: `python3 scripts/generate_slides.py --dir <d> --spec <spec.json>`.
 5. Build the video: `python3 scripts/build_video.py --script-file <script.txt> --dir <d> --slides <N> --topic <t>`.
-6. Verify outputs (`1.png`~`N.png`, `podcast.mp3`, `podcast.ass`, `output.mp4`). Inspect the
-   video with `ffmpeg -i output.mp4` (ffprobe is not required).
+6. Verify outputs (`1.png`~`N.png`, `podcast.mp3`, `podcast.ass`, `output.mp4`). Inspect the video with `ffmpeg -i output.mp4`.
