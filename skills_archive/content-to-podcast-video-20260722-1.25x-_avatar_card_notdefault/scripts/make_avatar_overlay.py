@@ -53,14 +53,11 @@ WAVE_BAR_MIN_H = 18
 WAVE_X_START = CARD_W - 60  # right edge
 
 FONT_PATH_CANDIDATES = [
-    # Open-source royalty-free commercial fonts (OFL / Apache / GPL)
-    "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
-    "/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc",
-    "/usr/share/fonts/truetype/noto/NotoSansSC-Regular.ttf",
-    "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc",
-    "/System/Library/Fonts/Supplemental/Arial Unicode.ttf",
-    "/System/Library/Fonts/STHeiti Light.ttc",
     "/System/Library/Fonts/PingFang.ttc",
+    "/System/Library/Fonts/STHeiti Light.ttc",
+    "/Library/Fonts/Arial Unicode.ttf",
+    "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc",
+    "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
 ]
 
 def find_font(size=32):

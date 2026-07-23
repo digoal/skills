@@ -58,7 +58,7 @@ CSS = """
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body {
   width: 1080px; height: 1920px;
-  font-family: "Noto Sans CJK SC", "Source Han Sans SC", "Noto Sans SC", "WenQuanYi Micro Hei", system-ui, -apple-system, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "PingFang SC", "Hiragino Sans GB", sans-serif;
   color: #F3F4F6; overflow: hidden; position: relative; background-color: #080B15;
 }
 .bg { position:absolute; inset:0; z-index:0;
@@ -201,13 +201,8 @@ def main():
     if not os.path.exists(args.spec):
         print(f"❌ Spec file not found: {args.spec}")
         sys.exit(1)
-    try:
-        with open(args.spec, "r", encoding="utf-8") as f:
-            spec = json.load(f)
-    except json.JSONDecodeError as e:
-        print(f"❌ JSON parsing error in spec file '{args.spec}': {e}")
-        print("  💡 Tip: Ensure internal double quotes in text/titles are replaced with Chinese brackets 「 and 」.")
-        sys.exit(1)
+    with open(args.spec, "r", encoding="utf-8") as f:
+        spec = json.load(f)
     render_slides(spec, args.dir)
 
 if __name__ == "__main__":

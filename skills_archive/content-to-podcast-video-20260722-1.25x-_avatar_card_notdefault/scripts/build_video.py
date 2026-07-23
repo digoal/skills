@@ -253,7 +253,7 @@ PlayResY: 1920
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: Default,Noto Sans CJK SC,42,&H00FFFFFF,&H000000FF,&H00000000,&HA0080B15,1,0,0,0,100,100,0,0,3,10,0,2,60,60,100,1
+Style: Default,PingFang SC,42,&H00FFFFFF,&H000000FF,&H00000000,&HA0080B15,1,0,0,0,100,100,0,0,3,10,0,2,60,60,100,1
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
@@ -366,16 +366,9 @@ def prepare_avatar_overlay(avatar_path, host_name, host_title, out_dir):
         return None
 
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    skill_root = os.path.dirname(script_dir)
-    ref_dir = os.path.join(skill_root, "references")
+    ref_dir = os.path.join(os.path.dirname(script_dir), "references")
     default_avatar = os.path.join(ref_dir, "digoal.png")
     default_premade_card = os.path.join(ref_dir, "_avatar_card.png")
-
-    # If avatar_path is relative and doesn't exist in current working directory, check skill_root
-    if avatar_path and not os.path.exists(avatar_path):
-        alt_path = os.path.join(skill_root, avatar_path)
-        if os.path.exists(alt_path):
-            avatar_path = alt_path
 
     # Fast path: Use pre-rendered avatar card directly if available for default settings
     if os.path.exists(default_premade_card):
@@ -428,13 +421,8 @@ def render_video(concat_file, audio_path, ass_path, output_mp4, avatar_card_path
     # Avatar overlay: bottom-right corner, 20px margin from right, 290px from bottom
     # Card size is 420x220. Position: x=1080-420-20=640, y=1920-220-290=1410
     if avatar_card_path and os.path.exists(avatar_card_path):
-        target_card = os.path.join(work_dir, "_avatar_card.png")
-        if os.path.abspath(avatar_card_path) != os.path.abspath(target_card):
-            try:
-                shutil.copy2(avatar_card_path, target_card)
-            except Exception as e:
-                print(f"⚠️  Could not copy avatar card to work_dir: {e}")
-        avatar_rel = os.path.basename(target_card)
+        avatar_rel = os.path.basename(avatar_card_path)
+        # overlay=x:y:format=yuv420p is NOT needed for overlay input — use alpha blending
         vf_filter = (
             f"{base_vf} [base]; "
             f"movie='{avatar_rel}',format=rgba [ovrl]; "
