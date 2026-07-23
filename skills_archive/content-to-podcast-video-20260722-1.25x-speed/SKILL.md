@@ -8,9 +8,8 @@ description: Converts long-form text or Markdown articles into mobile-optimized 
 This skill automates the complete end-to-end pipeline for converting an article or text document into a vertical (1080x1920) mobile-optimized video featuring:
 1. **Mobile Presentation Slides**: Large, readable vertical cards (1.png, 2.png, ...).
 2. **Reserved Subtitle Area**: Bottom 280px of every slide image left blank/clean for larger subtitles.
-3. **Host Portrait Overlay (Optional)**: Embedded host card on the bottom-right (circular avatar, name, title/intro, and soundwave indicator).
-4. **Single-Speaker Podcast**: Conversational script with domain-tailored TTS voice (default 1.25x speed `rate="+25%"`).
-5. **Text-Authoritative Video Synthesis**: Content-driven slide image display (each image stays on screen exactly while its section is being spoken; no image looping) and high-precision TTS boundary-aligned ASS subtitles.
+3. **Single-Speaker Podcast**: Conversational script with domain-tailored TTS voice (default 1.25x speed `rate="+25%"`).
+4. **Text-Authoritative Video Synthesis**: Content-driven slide image display (each image stays on screen exactly while its section is being spoken; no image looping) and high-precision TTS boundary-aligned ASS subtitles.
 
 ---
 
@@ -75,29 +74,6 @@ This skill automates the complete end-to-end pipeline for converting an article 
   - `MarginV: 100` (positioned in the bottom 280px reserved area).
   - `BorderStyle: 3`, `BackColour: &HA0080B15` (dark semi-transparent capsule box).
 
-### Step 3.5: Host Portrait Card Overlay (Optional)
-
-If `--avatar <image>` is passed to `build_video.py`, a host portrait card is composited in the **bottom-right corner** of the video frame, sitting **inside the subtitle reserved zone** to the right of the subtitle text.
-
-**Card anatomy (420 × 220 px, RGBA transparent background):**
-
-| Element | Details |
-| :--- | :--- |
-| Circular Avatar | Center-cropped from the provided image, masked to 140px circle with a cyan glowing ring |
-| Host Name | Bold white text, 36px, PingFang SC |
-| Host Title / Intro | Cyan text (`#67E8F9`), 26px, auto-wraps at ~10 chars |
-| Soundwave Bars | 5 bars of varying height in cyan, static decorative waveform |
-| Background | Dark semi-transparent card (`#080B15`, 78% opacity) with rounded corners and cyan border |
-
-**Position in video:** `x=640, y=1410` (20px from right edge, inside the 280px bottom zone).
-
-**Generation script:**
-- `python3 scripts/make_avatar_overlay.py --avatar <path> --name <name> --title <title> --output <out.png>`
-- Requires **Pillow** (`pip install pillow`).
-- Called automatically by `build_video.py` when `--avatar` is provided.
-
-**Fallback:** If Pillow is missing or avatar file not found, the overlay is silently skipped and the video renders normally without it.
-
 ### Step 4: Content-Driven Video Encoding (No Image Looping)
 - **Content-Synchronized Slide Display**:
   - Images are **NOT looped**.
@@ -105,28 +81,17 @@ If `--avatar <image>` is passed to `build_video.py`, a host portrait card is com
   - Slide `i` stays on screen from the speech start of `[SLIDE: i]` until the speech start of `[SLIDE: i+1]` (the last slide remains visible until the podcast ends).
 - **Audio Normalization**: `-af "loudnorm"`.
 - **FFmpeg Hardware Accelerated Encoding (Mac Videotoolbox)**:
-  - Without avatar overlay:
-    ```bash
-    ffmpeg -y -hwaccel videotoolbox \
-      -f concat -safe 0 -i concat.txt \
-      -i podcast.mp3 \
-      -vf "fps=24,scale=1080:1920,format=yuv420p,subtitles=podcast.ass" \
-      -c:v h264_videotoolbox -b:v 2M -r 24 -tag:v avc1 \
-      -c:a aac -ar 44100 -ac 2 -b:a 128k \
-      -af "loudnorm" -shortest -movflags +faststart output.mp4
-    ```
-  - With avatar overlay (auto-generated `_avatar_card.png`, composited via `movie` + `overlay` filter):
-    ```bash
-    ffmpeg -y -hwaccel videotoolbox \
-      -f concat -safe 0 -i concat.txt \
-      -i podcast.mp3 \
-      -vf "fps=24,scale=1080:1920,format=yuv420p,subtitles='podcast.ass' [base]; \
-           movie='_avatar_card.png',format=rgba [ovrl]; \
-           [base][ovrl] overlay=640:1410" \
-      -c:v h264_videotoolbox -b:v 2M -r 24 -tag:v avc1 \
-      -c:a aac -ar 44100 -ac 2 -b:a 128k \
-      -af "loudnorm" -shortest -movflags +faststart output.mp4
-    ```
+  ```bash
+  ffmpeg -y -hwaccel videotoolbox \
+    -f concat -safe 0 -i concat.txt \
+    -i podcast.mp3 \
+    -vf "fps=24,scale=1080:1920,format=yuv420p,subtitles=podcast.ass" \
+    -c:v h264_videotoolbox -b:v 2M -r 24 -tag:v avc1 \
+    -c:a aac -ar 44100 -ac 2 -b:a 128k \
+    -af "loudnorm" \
+    -shortest -movflags +faststart \
+    output.mp4
+  ```
 
 ---
 
@@ -137,12 +102,9 @@ The skill provides two reusable Python scripts in `scripts/`:
 1. `generate_slides.py`: Renders 1080x1920 slide PNGs (`1.png`..`N.png`) from a JSON spec.
    - `python3 scripts/generate_slides.py --dir <out_dir> --spec <spec.json>`
    - Auto-detects Chrome/Chromium/Edge; every slide keeps the bottom 300px subtitle zone clean.
-2. `build_video.py`: TTS audio + high-precision ASS subtitles + default/custom host portrait overlay + content-driven non-looping subtitled MP4.
-   - `python3 scripts/build_video.py --script-file <script.txt> [--dir <d>] [--slides N] [--topic tech] [--avatar <path>] [--host-name <name>] [--host-title <title>] [--output output.mp4]`
+2. `build_video.py`: TTS audio + high-precision ASS subtitles + content-driven non-looping subtitled MP4.
+   - `python3 scripts/build_video.py --script-file <script.txt> [--dir <d>] [--slides N] [--topic tech] [--output output.mp4]`
    - `--dir` defaults to the script file's directory (outputs land next to the script).
-   - `--avatar`: Path to host avatar image (JPG/PNG). Defaults to pre-rendered `references/_avatar_card.png` (skips image synthesis). Pass `none` to disable.
-   - `--host-name`: Display name of the host/speaker (default: `digoal德哥`).
-   - `--host-title`: Title/intro line of the host (default: `数据库 & AI 专家`).
    - Automatically parses `[SLIDE: N]` markers in `script.txt` to calculate exact slide display durations.
    - Prechecks that `ffmpeg` is on PATH; falls back to `libx264` if `h264_videotoolbox` fails.
 
@@ -175,11 +137,5 @@ When executing this skill:
 2. Formulate 5–8 key slide topics and write a slide spec JSON + the single-speaker podcast script formatted with `[SLIDE: 1]`, `[SLIDE: 2]`, ... section tags.
 3. Choose the appropriate TTS voice based on topic (auto-selected by `build_video.py --topic`).
 4. Generate slides: `python3 scripts/generate_slides.py --dir <d> --spec <spec.json>`.
-5. Build the video (default uses pre-rendered `references/_avatar_card.png` host portrait overlay unless `--avatar none` is specified):
-   - With default pre-rendered host card: `python3 scripts/build_video.py --script-file <script.txt> --dir <d> --slides <N> --topic <t>`
-   - With custom host card: `python3 scripts/build_video.py --script-file <script.txt> --dir <d> --slides <N> --topic <t> --avatar <photo.jpg> --host-name "姓名" --host-title "职位介绍"`
-   - Without host card: `python3 scripts/build_video.py --script-file <script.txt> --dir <d> --slides <N> --topic <t> --avatar none`
+5. Build the video: `python3 scripts/build_video.py --script-file <script.txt> --dir <d> --slides <N> --topic <t>`.
 6. Verify outputs (`1.png`~`N.png`, `podcast.mp3`, `podcast.ass`, `output.mp4`). Inspect the video with `ffmpeg -i output.mp4`.
-
-> [!TIP]
-> The host portrait card requires **Pillow**: `pip install pillow`. Pass `--avatar none` to disable the host portrait overlay.

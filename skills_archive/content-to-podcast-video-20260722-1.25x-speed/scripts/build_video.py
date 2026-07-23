@@ -2,7 +2,6 @@
 """
 Content to Podcast Video Generator
 Automates: Slide HTML/PNG generation -> TTS Audio (1.0x normal speed) -> Text-Authoritative ASS Subtitles -> MP4 Video
-Optionally overlays a host portrait card (avatar + name + title + soundwave) in the bottom-right corner.
 """
 
 import os
@@ -356,101 +355,38 @@ def build_concat_file(slide_timing, effective_num_slides, out_dir):
         f.write("\n".join(lines))
     return concat_path
 
-def prepare_avatar_overlay(avatar_path, host_name, host_title, out_dir):
-    """
-    Prepares the host portrait card PNG (RGBA).
-    Uses pre-rendered references/_avatar_card.png directly if default avatar is selected,
-    skipping dynamic image synthesis.
-    """
-    if not avatar_path or str(avatar_path).lower() in ("none", "false", "0", "off"):
-        return None
-
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    ref_dir = os.path.join(os.path.dirname(script_dir), "references")
-    default_avatar = os.path.join(ref_dir, "digoal.png")
-    default_premade_card = os.path.join(ref_dir, "_avatar_card.png")
-
-    # Fast path: Use pre-rendered avatar card directly if available for default settings
-    if os.path.exists(default_premade_card):
-        is_default_avatar = os.path.abspath(avatar_path) in (
-            os.path.abspath(default_avatar),
-            os.path.abspath(default_premade_card)
-        )
-        is_default_host = host_name in ("digoal德哥", "") and host_title in ("数据库 & AI 专家", "")
-        if is_default_avatar and is_default_host:
-            print(f"🖼️  Using pre-rendered host card: {default_premade_card} (synthesis skipped)")
-            return default_premade_card
-
-    if not os.path.exists(avatar_path):
-        print(f"⚠️  Avatar image not found: {avatar_path}. Skipping host card overlay.")
-        return None
-
-    card_path = os.path.join(out_dir, "_avatar_card.png")
-    overlay_script = os.path.join(script_dir, "make_avatar_overlay.py")
-
-    cmd = [
-        sys.executable, overlay_script,
-        "--avatar", avatar_path,
-        "--name", host_name or "",
-        "--title", host_title or "",
-        "--output", card_path,
-    ]
-    res = subprocess.run(cmd, capture_output=True, text=True)
-    if res.returncode == 0 and os.path.exists(card_path):
-        print(f"🖼️  Host portrait card generated: {card_path}")
-        return card_path
-    else:
-        print(f"⚠️  Avatar card generation failed: {res.stderr.strip()}")
-        print("   → Continuing without host portrait overlay.")
-        return None
-
-
-def render_video(concat_file, audio_path, ass_path, output_mp4, avatar_card_path=None):
+def render_video(concat_file, audio_path, ass_path, output_mp4):
     print("🎬 Rendering MP4 video (1.25x speed, 24fps smooth subtitle sampling)...")
-
+    
     work_dir = os.path.dirname(os.path.abspath(ass_path))
     ass_rel = os.path.basename(ass_path)
     concat_rel = os.path.basename(concat_file)
     audio_rel = os.path.basename(audio_path)
     output_rel = os.path.basename(output_mp4)
-
-    # ── Video filter chain ──────────────────────────────────────────────────
-    # Base: scale + format + subtitles
-    base_vf = f"fps=24,scale=1080:1920,format=yuv420p,subtitles='{ass_rel}'"
-
-    # Avatar overlay: bottom-right corner, 20px margin from right, 290px from bottom
-    # Card size is 420x220. Position: x=1080-420-20=640, y=1920-220-290=1410
-    if avatar_card_path and os.path.exists(avatar_card_path):
-        avatar_rel = os.path.basename(avatar_card_path)
-        # overlay=x:y:format=yuv420p is NOT needed for overlay input — use alpha blending
-        vf_filter = (
-            f"{base_vf} [base]; "
-            f"movie='{avatar_rel}',format=rgba [ovrl]; "
-            f"[base][ovrl] overlay=640:1410"
-        )
-        print(f"   ✦ Host portrait overlay: bottom-right at (640, 1410)")
-    else:
-        vf_filter = base_vf
-
+    
+    vf_filter = f"fps=24,scale=1080:1920,format=yuv420p,subtitles='{ass_rel}'"
     af_filter = "loudnorm"
-
-    def _build_hw_cmd():
-        return [
-            "ffmpeg", "-y",
-            "-hwaccel", "videotoolbox",
-            "-f", "concat", "-safe", "0", "-i", concat_rel,
-            "-i", audio_rel,
-            "-vf", vf_filter,
-            "-c:v", "h264_videotoolbox", "-b:v", "2M", "-r", "24", "-tag:v", "avc1",
-            "-c:a", "aac", "-ar", "44100", "-ac", "2", "-b:a", "128k",
-            "-af", af_filter,
-            "-shortest",
-            "-movflags", "+faststart",
-            output_rel
-        ]
-
-    def _build_sw_cmd():
-        return [
+    
+    cmd = [
+        "ffmpeg", "-y",
+        "-hwaccel", "videotoolbox",
+        "-f", "concat", "-safe", "0", "-i", concat_rel,
+        "-i", audio_rel,
+        "-vf", vf_filter,
+        "-c:v", "h264_videotoolbox", "-b:v", "2M", "-r", "24", "-tag:v", "avc1",
+        "-c:a", "aac", "-ar", "44100", "-ac", "2", "-b:a", "128k",
+        "-af", af_filter,
+        "-shortest",
+        "-movflags", "+faststart",
+        output_rel
+    ]
+    
+    res = subprocess.run(cmd, capture_output=True, text=True, cwd=work_dir)
+    if res.returncode == 0:
+        print(f"✅ Video render complete: {os.path.join(work_dir, output_rel)}")
+    else:
+        print(f"⚠️ Videotoolbox failed, retrying with software libx264...")
+        cmd_sw = [
             "ffmpeg", "-y",
             "-f", "concat", "-safe", "0", "-i", concat_rel,
             "-i", audio_rel,
@@ -462,26 +398,13 @@ def render_video(concat_file, audio_path, ass_path, output_mp4, avatar_card_path
             "-movflags", "+faststart",
             output_rel
         ]
-
-    res = subprocess.run(_build_hw_cmd(), capture_output=True, text=True, cwd=work_dir)
-    if res.returncode == 0:
-        print(f"✅ Video render complete: {os.path.join(work_dir, output_rel)}")
-    else:
-        print(f"⚠️ Videotoolbox failed, retrying with software libx264...")
-        res_sw = subprocess.run(_build_sw_cmd(), capture_output=True, text=True, cwd=work_dir)
+        res_sw = subprocess.run(cmd_sw, capture_output=True, text=True, cwd=work_dir)
         if res_sw.returncode == 0:
             print(f"✅ Software render complete: {os.path.join(work_dir, output_rel)}")
         else:
             print(f"❌ Render failed: {res_sw.stderr}")
 
 if __name__ == "__main__":
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    ref_dir = os.path.join(os.path.dirname(script_dir), "references")
-    default_card = os.path.join(ref_dir, "_avatar_card.png")
-    default_avatar = default_card if os.path.exists(default_card) else os.path.join(ref_dir, "digoal.png")
-    if not os.path.exists(default_avatar):
-        default_avatar = None
-
     parser = argparse.ArgumentParser(description="Content to Podcast Video Skill Runner")
     parser.add_argument("--dir", default=None,
                         help="Working/output directory (default: the --script-file's directory, else cwd)")
@@ -489,15 +412,8 @@ if __name__ == "__main__":
     parser.add_argument("--topic", default="tech", choices=["tech", "business", "story", "casual"])
     parser.add_argument("--script-file", help="Path to podcast script text file")
     parser.add_argument("--output", default="output.mp4", help="Output MP4 filename")
-    parser.add_argument("--rate", default="+25%", help="TTS speech rate (default: +25%% for 1.25x speed)")
-    # ── Host portrait overlay ───────────────────────────────────────────────
-    parser.add_argument("--avatar", default=default_avatar,
-                        help="Path to host portrait/avatar image (JPG/PNG). Defaults to references/_avatar_card.png. Set to 'none' to disable.")
-    parser.add_argument("--host-name", default="digoal德哥",
-                        help="Host display name shown on the portrait card (default: 'digoal德哥').")
-    parser.add_argument("--host-title", default="数据库 & AI 专家",
-                        help="Host title/intro shown on the portrait card (default: '数据库 & AI 专家').")
-
+    parser.add_argument("--rate", default="+25%", help="TTS speech rate (default: +25% for 1.25x speed)")
+    
     args = parser.parse_args()
 
     if shutil.which("ffmpeg") is None:
@@ -518,16 +434,11 @@ if __name__ == "__main__":
     with open(args.script_file, "r", encoding="utf-8") as f:
         script_text = f.read()
 
-    # Generate host portrait card if avatar is provided
-    avatar_card = prepare_avatar_overlay(
-        args.avatar, args.host_name, args.host_title, args.dir
-    )
-
     voice = auto_select_voice(args.topic, script_text)
     slide_timing, effective_slides = asyncio.run(
         generate_audio_ass_and_slide_durations(script_text, voice, args.slides, out_audio, out_ass, rate=args.rate)
     )
-
+    
     concat_file = build_concat_file(slide_timing, effective_slides, args.dir)
-    render_video(concat_file, out_audio, out_ass, out_mp4, avatar_card_path=avatar_card)
+    render_video(concat_file, out_audio, out_ass, out_mp4)
 
