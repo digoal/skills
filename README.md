@@ -292,6 +292,7 @@ PostgreSQL 问答助手
   
 基于内容生成视频播客
 - `content-to-podcast-video`: 输入原始文章内容或文件, 生成适合手机看的图片、音频、播客脚本, 选择合适的主播声音风格, 自动合成带字幕的视频播客.  
+- `book-sharing-video`: 输入原始读书笔记文章内容或文件、或书名, 生成适合手机观看的读书分享视频, 同时输出适合公众号传播的文案.   
   
 微信公众号文章自动创作与发布工具: 从选题搜索、撰写、AI 配图、排版到发布草稿箱, 一条命令搞定。可作为 Claude Code / Codex / Cursor 的 Skill, 也可独立命令行调用。
 - https://github.com/jiji262/wechat-publisher
