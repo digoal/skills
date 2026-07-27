@@ -147,3 +147,6 @@ pg-deploy-cluster : PostgreSQL 集群部署
   
 完成后, 给出详细部署报告附带连接信息.  
 ```
+  
+pg-create-cluster : PostgreSQL 集群部署, 由 Clup 提供, 可部署大规模 PG 高可用集群.  
+  
