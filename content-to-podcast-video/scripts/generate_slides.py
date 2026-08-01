@@ -36,6 +36,7 @@ import json
 import shutil
 import argparse
 import subprocess
+from pathlib import Path
 
 CHROME_CANDIDATES = [
     "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
@@ -178,16 +179,24 @@ def render_slides(spec, out_dir, chrome=None):
     ok = 0
     for i, slide in enumerate(slides, 1):
         png = os.path.join(out_dir, f"{i}.png")
-        html = os.path.join(out_dir, f"_slide_{i}.html")
-        with open(html, "w", encoding="utf-8") as f:
+        html_path = Path(out_dir) / f"_slide_{i}.html"
+        with open(html_path, "w", encoding="utf-8") as f:
             f.write(build_slide_html(slide))
-        subprocess.run([
+        # Resolve to an absolute file:// URI so Chrome can always load it,
+        # regardless of whether --dir was passed as "." or a relative path.
+        file_uri = html_path.resolve().as_uri()
+        result = subprocess.run([
             chrome, "--headless", f"--screenshot={png}",
             "--window-size=1080,1920", "--hide-scrollbars",
-            "--default-background-color=00000000", f"file://{html}"
+            "--default-background-color=00000000", file_uri
         ], capture_output=True, text=True)
-        os.remove(html)
+        try:
+            os.remove(html_path)
+        except OSError:
+            pass
         good = os.path.exists(png)
+        if not good and result.stderr:
+            print(f"    ⚠️  Chrome stderr for slide {i}:\n{result.stderr.strip()[:400]}")
         ok += good
         print(f"  {'✓' if good else '✗'} {i}.png")
     print(f"Rendered {ok}/{len(slides)} slides -> {out_dir}")

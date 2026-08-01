@@ -200,6 +200,7 @@ PostgreSQL 全球开发组核心 comitter Tom Lane
   
 各国产数据库厂商全栈专家
 - `kingbase-fullstack-expert`: 金仓数据库全栈专家  
+- `yashandb-fullstack-expert`: 崖山数据块全栈专家
   
 ### [日常] 前沿跟进
 开源项目排行榜解读  
