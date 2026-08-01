@@ -1,12 +1,35 @@
 **这些 skill 的生成方式参考** : [《如何创建 SKILL》](https://github.com/digoal/blog/tree/master/202604/20260421_02.md)  
   
-submodules
+### submodules
+添加 submodules
 ```
 # 1. 先浅克隆到目标目录
 git clone --depth 1 https://github.com/author/project.git path/to/subdirectory
 
 # 2. 再把它注册为子模块
 git submodule add https://github.com/author/project.git path/to/subdirectory
+```
+  
+更新 submodules  
+```
+# 1. 初始化并更新所有子模块
+git submodule update --init --recursive --remote
+
+# 2. 添加所有更改（包括子模块的更新）
+git add .
+
+# 3. 提交更改
+git commit -m "Update all submodules to latest versions"
+
+# 4. 推送到 GitHub
+git push origin main  # 或你的分支名
+```
+  
+克隆 submodules
+```
+git clone --depth 1 https://github.com/digoal/skills
+cd skills
+git submodule update --init --recursive --depth 1
 ```
   
 ## skill 介绍
