@@ -354,12 +354,14 @@ def build_concat_file(slide_timing, effective_num_slides, out_dir):
         start_s = (st["start"] or 0.0) / 1000.0
         end_s = (st["end"] or start_s + 5.0) / 1000.0
         dur_s = max(0.5, end_s - start_s)
-        img_file = os.path.join(out_dir, f"{i}.png")
+        # Use absolute paths so ffmpeg (cwd=out_dir) can find the images
+        # even when --dir was passed as a relative path.
+        img_file = os.path.abspath(os.path.join(out_dir, f"{i}.png"))
         lines.append(f"file '{img_file}'")
         lines.append(f"duration {dur_s:.3f}")
         print(f"   - Slide {i}.png: {start_s:.2f}s -> {end_s:.2f}s ({dur_s:.2f}s)")
 
-    lines.append(f"file '{os.path.join(out_dir, f'{effective_num_slides}.png')}'")
+    lines.append(f"file '{os.path.abspath(os.path.join(out_dir, f'{effective_num_slides}.png'))}'")
 
     with open(concat_path, "w", encoding="utf-8") as f:
         f.write("\n".join(lines))
