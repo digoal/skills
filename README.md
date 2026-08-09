@@ -222,7 +222,7 @@ PostgreSQL 全球开发组核心 comitter Tom Lane
 - `luo-hongxian-perspective`: 用女娲.skill 蒸馏紫微斗数作者罗洪先
   
 各国产数据库厂商全栈专家
-- `kingbase-fullstack-expert`: 金仓数据库全栈专家  
+- `kingbase-fullstack-expert`: 金仓数据库全栈专家, 已移动到 kingbase 目录中   
 - `yashandb-fullstack-expert`: 崖山数据块全栈专家
   
 ### [日常] 前沿跟进
