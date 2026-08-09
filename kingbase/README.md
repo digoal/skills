@@ -139,3 +139,68 @@ SQL 注入风险审查, 此处可能作为提示提醒用户自查, 因给出的
 ````
   
   
+-----
+  
+本地 KingbaseES 测试实例部署方法:
+  
+我的是 Apple M 系列芯片 macOS 
+  
+从 https://www.kingbase.com.cn/download.html 选择 飞腾(Aarch64)_Linux 下载 Docker image tar 包
+  
+导入镜像
+```
+docker load -i ~/Downloads/KingbaseES_V009R001C010B0004_aarch64_Docker.tar 
+```
+  
+查看镜像名
+```
+docker images|grep -i kingbase
+kingbase_v009r001c010b0004_single_arm:v1                                    6cb9dd8112e4       1.68GB          827MB   U 
+```
+  
+启动 kingbaseES 实例子
+```
+mkdir ~/kbdata
+
+docker run -tid --privileged \
+-p 5432:54321 \
+-v ~/kbdata:/home/kingbase/userdata/ \
+-e NEED_START=yes  \
+-e DB_USER=kingbase  \
+-e DB_PASSWORD=123456 \
+-e DB_MODE=pg  \
+--name kingbase \
+kingbase_v009r001c010b0004_single_arm:v1 \
+/usr/sbin/init
+```
+  
+如果宿主机安装过 PostgreSQL, 可直接使用 psql 连接 Kingbase:
+```
+PGHOST=127.0.0.1 PGPORT=5432 PGDBNAME=kingbase PGUSER=kingbase PGPASSWORD=123456 psql
+```
+  
+或进入容器后使用 ksql 连接
+```
+docker exec -ti kingbase bash
+ksql
+```
+  
+-----
+  
+SKILL 复刻自我在龙蜥社区提交的 PostgreSQL SKILLs 
+```
+/skill-creator 
+参考 ~/.claude/skills/pg-top-sql-analyze 这个 postgresql skill 编写对应的 kingbase skill , skill 名字中的 pg 替换为 kingbase. 
+必要时参考 kingbase 官方文档, 入口地址 : https://docs.kingbase.com.cn/cn/KES-V9R1C10/introduction 注意这个 URL 只是入口, 你需要自行获得真正需要的 URL. 
+优先使用 `curl -sL --noproxy '*' --max-time 30` 获取网页内容. 
+目前 kingbase 实例已启动, 连接串为 PGHOST=127.0.0.1 PGPORT=5432 PGDBNAME=kingbase PGUSER=kingbase PGPASSWORD=123456 ; 在 kingbase 手册中这些环境变量可能被描述为 KINGBASE 开头例如 KINGBASEHOST 或 KINGBASE_HOST, 你别管, 请继续使用 PG 的环境变量. 
+如果验证涉及日志, 验证时查看 ~/kbdata/data/sys_log 目录, 实际场景请用户提供目录路径. 
+SKILL 必须用 kingbase 实例进行验证, 验证通过才算完成. 
+SKILL 其他通用要求 :  
+默认假设 kingbase 采用了兼容 pg 的模式 ;
+连接串相关的环境变量 PGHOST PGPORT PGDBNAME PGUSER PGPASSWORD 优先采用用户提供的 ;
+如果用户没有提供, 则读取环境变量 ;
+如果没有环境变量, 则采用默认的 PGHOST=127.0.0.1 PGPORT=5432 PGDBNAME=kingbase PGUSER=kingbase PGPASSWORD=123456 ;
+skill 的 script 应该兼容 python sdk 和 psql shell command 连接数据库 ; 
+```
+  
