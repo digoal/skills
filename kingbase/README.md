@@ -2,6 +2,8 @@ KingbaseES 数据库 SKILLs:
   
 kingbase-fullstack-expert : Kingbase 全栈专家, 可回答任何 Kingbase 问题.  
   
+以下 SKILL 使用时需要提前配置好这些环境变量: `PGHOST PGPORT PGDBNAME PGUSER PGPASSWORD` 或 明确告知 sys_log 目录的位置.  
+  
 kingbase-awr-report : 生成 AWR 报告  
 ```
 给定 KingbaseES 连接串和用户密码, 生成 KingbaseES 健康报告, 类似 Oracle AWR 报告.
