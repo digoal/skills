@@ -1,0 +1,44 @@
+{
+  "skill_name": "kingbase-sql-tuning-advisor",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "我这台金仓（KingbaseES）上有个查询特别慢，帮我看看怎么优化。连接信息：PGHOST=127.0.0.1 PGPORT=5432 PGDBNAME=kingbase PGUSER=kingbase PGPASSWORD=123456。SQL 是：SELECT aid, abalance FROM pgbench_accounts WHERE bid = 5 AND abalance > 10000 ORDER BY abalance DESC LIMIT 50; 请分析执行计划、找出瓶颈，输出一份中文 SQL 调优报告（含可复制的索引建议），保存为 markdown 文件。",
+      "expected_output": "一份中文 markdown SQL 调优报告，包含真实 EXPLAIN ANALYZE 计划、问题定位、按优先级排序的优化建议（含可复制 SQL）。",
+      "files": [],
+      "expectations": [
+        "报告为中文 markdown 文件并保存到 outputs 目录",
+        "报告包含 EXPLAIN ANALYZE 真实执行计划片段（含 actual time/rows）",
+        "报告包含问题定位分析（扫描方式/排序/统计信息等）",
+        "报告给出至少一条可复制的 SQL 优化建议（如 CREATE INDEX CONCURRENTLY 或 SQL 改写）",
+        "报告不包含明文密码（密码需脱敏）"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "金仓数据库（连接：127.0.0.1:5432，库 kingbase，用户 kingbase，密码 123456）上我们有个 UPDATE 想上线前评估一下，SQL：UPDATE pgbench_tellers SET tbalance = tbalance + 100 WHERE tid = 1; 请安全地分析它的执行计划并给优化建议（注意：只能分析，绝不能真正改到数据），输出中文 markdown 调优报告。",
+      "expected_output": "一份中文 markdown 调优报告，DML 分析必须在事务中执行并回滚，绝不提交，报告需确认数据未被修改。",
+      "files": [],
+      "expectations": [
+        "报告为中文 markdown 文件并保存到 outputs 目录",
+        "报告明确确认 DML 在事务中执行并已回滚（ROLLBACK / 未提交任何数据变更）",
+        "实例中 pgbench_tellers 的数据未被持久化修改（n_tup_upd 或数据校验无变化）",
+        "报告包含执行计划片段与至少一条优化建议",
+        "报告不包含明文密码"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "帮我调优这条金仓上的参数化 SQL（$1/$2 是应用绑定的变量）：SELECT aid, abalance FROM pgbench_accounts WHERE bid = $1 AND abalance > $2 ORDER BY abalance DESC LIMIT 100; 连接：PGHOST=127.0.0.1 PGPORT=5432 PGDBNAME=kingbase PGUSER=kingbase PGPASSWORD=123456。请说明不同参数值对执行计划的影响，输出中文 markdown 调优报告。",
+      "expected_output": "一份中文 markdown 调优报告，说明 $1/$2 取值方式，并用至少两种参数值对比执行计划（选择性影响分析）。",
+      "files": [],
+      "expectations": [
+        "报告为中文 markdown 文件并保存到 outputs 目录",
+        "报告说明 $1/$2 的取值方式（用户提供或按统计信息推断并注明）",
+        "报告用至少两种参数值对比执行计划，说明选择性对计划的影响",
+        "报告包含优化建议",
+        "报告不包含明文密码"
+      ]
+    }
+  ]
+}

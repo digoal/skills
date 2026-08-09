@@ -1,0 +1,91 @@
+-- kingbase-runtime-risk / references/manual_checks.sql
+-- 本文件中的查询/命令分为两类：
+--   (A) 只读辅助查询 —— 可直接执行，用于补充第七部分单点故障分析
+--       以及第六部分连接数耗尽的按角色排查
+--   (B) 破坏性操作模板 —— 仅作为"建议命令"呈现给用户，
+--       Agent 不得自动执行，必须等待用户明确二次确认后才可运行
+--
+-- 注：KingbaseES 默认采用 PG 兼容模式，pg_* 视图与 PostgreSQL 12 一致；
+--     若 DBA 偏好金仓原生视图，可将本文件中的 pg_* 替换为 sys_catalog.sys_*
+--     （如 pg_stat_replication → sys_catalog.sys_stat_replication）。
+
+-- =========================================================
+-- (A) 只读辅助查询
+-- =========================================================
+
+-- A1. 同步备库数量与状态（用于判断"同步备库缺失"风险）
+SELECT count(*) FILTER (WHERE sync_state = 'sync') AS sync_standby_count,
+       count(*) AS total_standby_count
+FROM pg_stat_replication;
+
+-- A2. synchronous_standby_names 配置内容（为空表示未配置任何同步备库）
+SELECT setting FROM pg_settings WHERE name = 'synchronous_standby_names';
+
+-- A3. synchronous_commit 取值（off/local 时即使有同步备库也不保证同步）
+SELECT setting FROM pg_settings WHERE name = 'synchronous_commit';
+
+-- A4. 检测 serial/smallserial 语义的序列（对应列 data_type 为 integer/smallint）
+--     与 02_sequence_risk.csv 中的 data_type 字段结合使用，
+--     若剩余调用次数已进入警告及以上，建议改为 bigserial。
+SELECT n.nspname, c.relname AS seq_name, format_type(s.seqtypid, null) AS data_type
+FROM pg_sequence s
+JOIN pg_class c ON s.seqrelid = c.oid
+JOIN pg_namespace n ON c.relnamespace = n.oid
+WHERE format_type(s.seqtypid, null) IN ('integer','smallint')
+  AND n.nspname NOT IN ('sys_catalog','sys_hm','sysmac','sysaudit','src_restrict',
+                        'anon','perf','xlog_record_read','dbms_job','dbms_scheduler',
+                        'kdb_schedule','pg_bitmapindex');
+
+-- A5. 检查 sys_stat_statements 是否已启用（金仓没有 pg_stat_statements！
+--     该扩展需在 shared_preload_libraries 中加载，用于第九部分"统计信息过时"
+--     验证阶段辅助定位高频/劣化查询，进而对其执行 EXPLAIN (ANALYZE, BUFFERS) 做偏差验证）
+SELECT setting FROM pg_settings WHERE name = 'shared_preload_libraries';
+-- 同时可确认扩展安装状态：
+SELECT extname, extversion FROM pg_extension WHERE extname = 'sys_stat_statements';
+-- 启用后即可查询（列与 PG 12 版 pg_stat_statements 一致）：
+SELECT queryid, left(query, 80) AS query, calls, total_exec_time
+FROM sys_stat_statements ORDER BY calls DESC LIMIT 10;
+
+-- A6. 实例是否已加载 sys_kwr 自动性能快照仓库（金仓自带 AWR 式快照，可作交叉验证，
+--     有则建议将数据库年龄/序列剩余值等指标纳入其定期采集形成趋势）
+SELECT extname, extversion FROM pg_extension WHERE extname = 'sys_kwr';
+
+-- =========================================================
+-- (B) 破坏性操作模板 —— 严禁自动执行，仅供用户手动确认后使用
+-- =========================================================
+
+-- B1. 清理未激活的复制槽（会立即释放该槽保留的 WAL，若消费者尚未消费完毕会导致数据丢失）
+-- SELECT pg_drop_replication_slot('要删除的槽名');
+
+-- B2. 清理疑似孤立的大对象（执行前必须先通过 08_lo_reference_columns.csv
+--     人工核对该 OID 是否仍被某张表的 oid/lo 列引用，或被应用层文件路径引用）
+-- SELECT lo_unlink(loid) FROM pg_largeobject_metadata WHERE loid NOT IN (/* 人工确认的在用 OID 列表 */);
+
+-- B3. 手动触发 vacuum freeze（当数据库年龄已进入警告/严重区间，
+--     且 autovacuum 未能及时处理时使用；会产生较大 IO，建议在业务低峰期执行）
+-- VACUUM (FREEZE, VERBOSE, ANALYZE) <table_name>;
+
+-- B4. 调整 autovacuum_freeze_max_age，使 freeze 更均匀分摊（示例：从默认调低到 10 亿）
+-- ALTER SYSTEM SET autovacuum_freeze_max_age = 1000000000;
+-- SELECT pg_reload_conf();
+
+-- B5. 终止长时间 idle in transaction 的连接（释放连接数、解除对 autovacuum 推进的阻塞）
+--     执行前必须与用户确认具体 pid（来自 06_long_idle_in_transaction.csv），
+--     且需告知：该连接若持有未提交事务，终止后事务会回滚，业务侧可能感知为连接异常断开。
+-- SELECT pg_terminate_backend(<pid>);
+-- （金仓也提供 sys_terminate_backend(<pid>)，功能等价，二选一）
+
+-- B6. 手动触发 ANALYZE（当 09_stats_staleness.csv 中某表 pct_of_trigger 已进入警告/严重区间，
+--     或 09_never_analyzed.csv 中出现从未分析过的大表时使用；ANALYZE 本身只读扫描采样、
+--     只写统计目录，不锁表、代价远低于 VACUUM，可在业务高峰期执行，但仍建议避开极端峰值）
+-- ANALYZE VERBOSE <table_name>;
+-- 若同时伴随 dead_tuple_pct 过高（死元组堆积），建议改为：
+-- VACUUM ANALYZE VERBOSE <table_name>;
+
+-- B7. 调低表级 autoanalyze 触发阈值，使高频表的统计信息更及时刷新
+--     （对应 09_stats_staleness.csv 中 effective_scale_factor 明显偏高的大表）
+-- ALTER TABLE <table_name> SET (autovacuum_analyze_scale_factor = 0.01, autovacuum_analyze_threshold = 1000);
+
+-- B8. 若某表因业务方历史原因被显式禁用了 autovacuum（autovacuum_enabled=false），
+--     且确认该表实际仍有写入、需要统计信息保持新鲜，可重新开启（需与业务方确认非刻意归档表）
+-- ALTER TABLE <table_name> RESET (autovacuum_enabled);

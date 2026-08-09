@@ -346,6 +346,10 @@ PostgreSQL 问答助手
 ### PostgreSQL 数据库专用 SKILLs  
 [PostgreSQL 数据库专用 SKILLs](postgresql/README.md)  
   
+### Kingbase 数据块专用 SKILLs
+[Kingbase 数据库专用 SKILLs](kingbase/README.md)  
+
+  
 ### Anthropics 内置 SKILLs
 [Anthropics 内置 SKILLs](anthropics_skills/README.md)     
   
