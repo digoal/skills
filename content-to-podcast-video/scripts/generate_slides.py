@@ -186,7 +186,7 @@ def render_slides(spec, out_dir, chrome=None):
         # regardless of whether --dir was passed as "." or a relative path.
         file_uri = html_path.resolve().as_uri()
         result = subprocess.run([
-            chrome, "--headless", f"--screenshot={png}",
+            chrome, "--headless=new", f"--screenshot={png}",
             "--window-size=1080,1920", "--hide-scrollbars",
             "--default-background-color=00000000", file_uri
         ], capture_output=True, text=True)

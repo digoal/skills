@@ -177,3 +177,19 @@ When executing this skill:
 
 > [!TIP]
 > The host portrait overlay is enabled by default using `references/_avatar_card.png`. Pass `--avatar none` to disable.
+
+---
+
+## Known Issues & Fix History
+
+### 2026-08-08 Fixed: Blank slide PNGs under new Chrome
+
+**Symptom**: `generate_slides.py` renders `1.png`..`N.png` with only the background gradient — no text or cards (~29KB each instead of 800KB+).
+
+**Root cause** (Chrome 132+, especially 151): the script used the legacy `--headless` flag. In new headless mode its screenshot timing fires before content has painted, producing empty captures.
+
+**Fix applied** (already in `scripts/generate_slides.py`; no action needed): use `--headless=new`. The absolute `file://` URI was already handled via `html_path.resolve().as_uri()`.
+
+**⚠️ Warning**: do NOT add `--virtual-time-budget` to the render command while the slide CSS keeps the Google Fonts `@import` — the combination hangs Chrome indefinitely (tested: no output after 4 minutes).
+
+**Verification**: rendered PNGs should be >800KB; blank ones are ~29KB. Optionally check the dark-text pixel ratio of the image.

@@ -131,3 +131,23 @@ description: 将书籍内容转化为温暖书香风的竖屏读书分享视频�
    - `python3 scripts/generate_slides.py --dir <d> --spec <spec.json>`
    - `python3 scripts/build_video.py --script-file <script.txt> --dir <d> --slides <N> --topic literature --avatar none`
 6. 检查产出文件（`1.png`~`N.png`, `podcast.mp3`, `podcast.ass`, `output.mp4`, `article.md`）
+
+---
+
+## 常见问题与修复记录
+
+### 2026-08-08 修复：Chrome 下幻灯片空白（无文字）
+
+**现象**：执行 `generate_slides.py` 后 `1.png`~`N.png` 只有背景渐变色、没有任何文字/卡片，每个文件仅约 29KB（正常应为 800KB+）。
+
+**根因**（Chrome 132+，尤其是 151）：
+1. 脚本使用旧参数 `--headless`，新版 Chrome 下截图时机过早，未等文字内容绘制完成就截了图。
+2. 本 skill 的脚本还用了相对路径 `file://{html}`：当 `--dir .` 时 URL 变成 `file://./_slide_N.html`，Chrome 加载异常。
+
+**已修复**（已写入 `scripts/generate_slides.py`，后续使用无需额外操作）：
+- `--headless` → `--headless=new`
+- 截图 URL 改为 `file://{os.path.abspath(html)}`（绝对路径）
+
+**⚠️ 注意事项**：不要给渲染命令加 `--virtual-time-budget` 并同时保留 CSS 里的 Google Fonts `@import`——两者组合会让 Chrome 无限挂起（实测 4 分钟无产出）。
+
+**验证方法**：渲染后检查 PNG 文件大小——空白页约 29KB，正常内容页 800KB+；也可对图片做暗色文字像素占比检测。

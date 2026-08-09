@@ -517,5 +517,9 @@ npx playwright install
   
 如果要把它加入 Codex MCP，需要用你当前环境对应的 MCP 配置命令；从技能内容本身看，只能确定它需要 DeepWiki MCP 能力，不能确定唯一安装方式。  
   
+4、ffmpeg, ffprobe  
+  
+文字、图片、音频合成转视频依赖.  
+  
 其他参考: [《Claude , Codex 使用经验总结》](https://github.com/digoal/blog/tree/master/202604/20260415_05.md)  
   

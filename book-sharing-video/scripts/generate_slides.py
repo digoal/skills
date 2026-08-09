@@ -297,9 +297,9 @@ def render_slides(spec, out_dir, chrome=None):
         with open(html, "w", encoding="utf-8") as f:
             f.write(build_slide_html(slide))
         subprocess.run([
-            chrome, "--headless", f"--screenshot={png}",
+            chrome, "--headless=new", f"--screenshot={png}",
             "--window-size=1080,1920", "--hide-scrollbars",
-            "--default-background-color=00000000", f"file://{html}"
+            "--default-background-color=00000000", f"file://{os.path.abspath(html)}"
         ], capture_output=True, text=True)
         os.remove(html)
         good = os.path.exists(png)
