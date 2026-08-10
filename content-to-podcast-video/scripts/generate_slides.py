@@ -83,11 +83,11 @@ body {
 .kicker { font-size:30px; font-weight:800; letter-spacing:6px; color:#67E8F9;
   margin-bottom:40px; text-align:center; }
 .cover-title { text-align:center; font-weight:900; color:#fff; line-height:1.22;
-  max-width:960px; word-break:break-word;
+  max-width:980px; word-break:break-word;
   text-shadow: 0 6px 40px rgba(6,182,212,0.35); }
 /* Adaptive cover sizes by line count */
 .cover-title.l1 { font-size:140px; }
-.cover-title.l2 { font-size:120px; }
+.cover-title.l2 { font-size:100px; }
 .cover-title.l3 { font-size:88px; }
 .cover-sub { margin-top:56px; font-size:38px; color:rgba(255,255,255,.62);
   text-align:center; font-weight:500; line-height:1.5; max-width:820px; }
@@ -186,7 +186,7 @@ def render_slides(spec, out_dir, chrome=None):
         # regardless of whether --dir was passed as "." or a relative path.
         file_uri = html_path.resolve().as_uri()
         result = subprocess.run([
-            chrome, "--headless=new", f"--screenshot={png}",
+            chrome, "--headless", f"--screenshot={png}",
             "--window-size=1080,1920", "--hide-scrollbars",
             "--default-background-color=00000000", file_uri
         ], capture_output=True, text=True)

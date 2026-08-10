@@ -266,6 +266,14 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 
     return slide_timing, effective_num_slides
 
+# Sentence terminators recognized by both this parser and edge_tts.
+# IMPORTANT: edge_tts (Azure TTS) treats BOTH full-width (？！。！？) AND ASCII (?!) punctuation
+# as sentence boundaries. Missing ASCII forms here causes a positional mismatch between
+# parsed sentences and SentenceBoundary events, which silently shifts all subsequent
+# slide_timing assignments and produces out-of-sync slide images.
+SENTENCE_TERMINATORS = "。！？。！？?!；;\n"
+
+
 def parse_script_and_slides(script_text, target_num_slides):
     """
     Parses script text into slide-associated sentences and produces clean text for TTS.
@@ -275,7 +283,7 @@ def parse_script_and_slides(script_text, target_num_slides):
     sentences_info = []
     current_slide = 1
     has_explicit_tags = bool(re.search(r'\[SLIDE:\s*\d+\]', script_text, re.IGNORECASE))
-    
+
     if has_explicit_tags:
         for line in lines:
             line_str = line.strip()
@@ -285,11 +293,11 @@ def parse_script_and_slides(script_text, target_num_slides):
             if m:
                 current_slide = int(m.group(1))
             else:
-                clauses = [s.strip() for s in re.split(r'([。！？\n])', line_str) if s.strip()]
+                clauses = [s.strip() for s in re.split(f'([{re.escape(SENTENCE_TERMINATORS)}])', line_str) if s.strip()]
                 curr = ""
                 for s in clauses:
                     curr += s
-                    if s in '。！？\n':
+                    if s in SENTENCE_TERMINATORS:
                         sentences_info.append({"slide_idx": current_slide, "text": curr})
                         curr = ""
                 if curr:
