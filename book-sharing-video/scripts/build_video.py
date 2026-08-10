@@ -233,11 +233,43 @@ async def generate_audio_ass_and_slide_durations(script_text, voice, target_num_
                 dialogues.append(f"Dialogue: 0,{s_ass},{e_ass},Default,,0,0,0,,{formatted}")
             curr_start = curr_end
 
+    # ── Fallback: give slides with no narration a placeholder slot ──
+    # If [SLIDE:] sections < --slides, some slides end up with start=None.
+    # Instead of letting them become 0.00s in the concat file, insert each
+    # missing slide's slot into the nearest gap between narrated neighbours
+    # (preserving order and non-negative durations). Trailing gaps are placed
+    # right after the last narrated slide; the audio is then padded with
+    # silence so those slots survive the -shortest trim in render_video().
+    missing_slides = [i for i in range(1, effective_num_slides + 1)
+                      if slide_timing[i]["start"] is None]
+    pad_to_ms = 0.0
+    if missing_slides:
+        placeholder_ms = 5000.0  # 5s per silent slide
+        for i in missing_slides:
+            prev_end = 0.0
+            for j in range(i - 1, 0, -1):
+                if slide_timing[j]["end"] is not None:
+                    prev_end = slide_timing[j]["end"]
+                    break
+            next_start = None
+            for j in range(i + 1, effective_num_slides + 1):
+                if slide_timing[j]["start"] is not None:
+                    next_start = slide_timing[j]["start"]
+                    break
+            if next_start is None:
+                # Trailing gap: sit right after the last narrated slide.
+                start, end = prev_end, prev_end + placeholder_ms
+                pad_to_ms = max(pad_to_ms, end)
+            else:
+                # Middle gap: fit the slot inside [prev_end, next_start].
+                start = max(prev_end, next_start - placeholder_ms)
+                end = min(start + placeholder_ms, next_start)
+            slide_timing[i]["start"] = start
+            slide_timing[i]["end"] = end
+        print(f"⚠️  Slide(s) {missing_slides} have no narration; assigned {placeholder_ms/1000:.0f}s placeholder slot(s) each.")
+
     # Normalize slide timings for continuous display without looping
-    if slide_timing[1]["start"] is not None:
-        slide_timing[1]["start"] = 0.0
-    else:
-        slide_timing[1]["start"] = 0.0
+    slide_timing[1]["start"] = 0.0
 
     for i in range(1, effective_num_slides):
         if slide_timing[i + 1]["start"] is not None:
@@ -249,6 +281,23 @@ async def generate_audio_ass_and_slide_durations(script_text, voice, target_num_
         slide_timing[effective_num_slides]["end"] or total_audio_ms,
         total_audio_ms
     )
+
+    # Pad the audio with silence if placeholder slots extend past the narration,
+    # so trailing placeholder slides survive the -shortest trim in render_video().
+    if pad_to_ms > total_audio_ms:
+        pad_s = (pad_to_ms - total_audio_ms) / 1000.0
+        padded_path = out_audio + ".padded.mp3"
+        res = subprocess.run([
+            "ffmpeg", "-y", "-i", out_audio,
+            "-af", f"apad=whole_dur={pad_to_ms / 1000.0:.3f}",
+            "-c:a", "libmp3lame", "-b:a", "128k", padded_path
+        ], capture_output=True, text=True)
+        if res.returncode == 0 and os.path.exists(padded_path):
+            os.replace(padded_path, out_audio)
+            total_audio_ms = pad_to_ms
+            print(f"🔇 Padded audio with {pad_s:.1f}s of silence to cover placeholder slide(s).")
+        else:
+            print(f"⚠️  Audio padding failed ({res.stderr.strip()[-200:]}); placeholder slides may be cut short.")
 
     # ASS Header — warm-toned subtitle box for book sharing
     ass_header = """[Script Info]
@@ -342,6 +391,28 @@ def parse_script_and_slides(script_text, target_num_slides):
     clean_script_text = "\n".join(item["text"] for item in sentences_info)
     max_slide_found = max([item["slide_idx"] for item in sentences_info], default=target_num_slides)
     effective_num_slides = max(target_num_slides, max_slide_found)
+
+    # ── Defensive validation: [SLIDE:] section numbering must match --slides ──
+    # A mismatch silently produced broken slide timings (slides with no narration
+    # got a 0.00s start and almost no screen time in the final video). Compare
+    # against the actual set of narrated slide indices so sparse/missing numbers
+    # in the middle are detected too, not just trailing gaps.
+    if has_explicit_tags:
+        narrated = {item["slide_idx"] for item in sentences_info}
+        missing = sorted(set(range(1, target_num_slides + 1)) - narrated)
+        extra = sorted(narrated - set(range(1, target_num_slides + 1)))
+        if missing or extra:
+            if missing:
+                print(f"⚠️  WARNING: no [SLIDE:] narration for slide(s) {missing} (--slides={target_num_slides}).")
+                print("   Those slides get a short placeholder slot instead of real screen time.")
+                if max_slide_found != target_num_slides:
+                    print(f"   Fix: add a [SLIDE: N] section for each missing slide, or pass --slides {max_slide_found}.")
+                else:
+                    print("   Fix: add a [SLIDE: N] section for each missing slide.")
+            if extra:
+                print(f"⚠️  WARNING: [SLIDE:] section(s) {extra} exceed --slides={target_num_slides} — narration without a slide image.")
+                print(f"   Fix: render {max_slide_found} slides, or pass --slides {max_slide_found}.")
+            print("   (Continuing anyway; verify the output.mp4 slide timings if you proceed.)")
 
     return clean_script_text, sentences_info, effective_num_slides
 

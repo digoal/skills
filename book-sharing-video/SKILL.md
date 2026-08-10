@@ -80,6 +80,13 @@ description: 将书籍内容转化为温暖书香风的竖屏读书分享视频�
 
 **幻灯片标记**：在 `script.txt` 中加入 `[SLIDE: 1]`, `[SLIDE: 2]` 标记。
 
+> ⚠️ **硬性约束（1:1 对应）**：`[SLIDE: N]` 段落的**数量与编号**必须与幻灯片张数（`--slides N`）**严格一致**。例如渲染了 7 张幻灯片（`1.png`~`7.png`），脚本就必须有 `[SLIDE: 1]` 到 `[SLIDE: 7]` 共 7 段。
+>
+> - 段落数 < 幻灯片数 → 多余幻灯片**没有解说**，只能分到 5 秒占位画面（脚本会自动为占位画面补静音，使其完整显示而非被 `-shortest` 截掉）；
+> - 段落数 > 幻灯片数 → 多余段落有解说却无对应画面。
+>
+> `build_video.py` 检测到不匹配时会**打印明确警告**（`⚠️ WARNING: … [SLIDE:] section …`），务必按警告修正脚本后再重跑。
+
 **语音选择**：
 - 人文/思想/哲学：`zh-CN-YunjianNeural`（沉稳男声）
 - 商业/管理/自律：`zh-CN-YunxiNeural`（自然男声）
@@ -126,28 +133,8 @@ description: 将书籍内容转化为温暖书香风的竖屏读书分享视频�
 1. 读取输入（读书笔记/书名）
 2. **用「问题驱动」逻辑**重构内容为 3-6 个核心追问
 3. 撰写幻灯片 Spec JSON（追问标题 + 顿悟金句）
-4. 撰写播客脚本 `script.txt`（带 `[SLIDE: N]`）与公众号文章 `article.md`
-5. 执行生成脚本：
+4. 撰写播客脚本 `script.txt`（带 `[SLIDE: N]`，**段数 = 幻灯片张数，编号从 1 连续递增**）与公众号文章 `article.md`
+5. 执行生成脚本（`--slides <N>` 必须与 Spec 中幻灯片张数、`script.txt` 中 `[SLIDE:]` 段数三者一致）：
    - `python3 scripts/generate_slides.py --dir <d> --spec <spec.json>`
    - `python3 scripts/build_video.py --script-file <script.txt> --dir <d> --slides <N> --topic literature --avatar none`
-6. 检查产出文件（`1.png`~`N.png`, `podcast.mp3`, `podcast.ass`, `output.mp4`, `article.md`）
-
----
-
-## 常见问题与修复记录
-
-### 2026-08-08 修复：Chrome 下幻灯片空白（无文字）
-
-**现象**：执行 `generate_slides.py` 后 `1.png`~`N.png` 只有背景渐变色、没有任何文字/卡片，每个文件仅约 29KB（正常应为 800KB+）。
-
-**根因**（Chrome 132+，尤其是 151）：
-1. 脚本使用旧参数 `--headless`，新版 Chrome 下截图时机过早，未等文字内容绘制完成就截了图。
-2. 本 skill 的脚本还用了相对路径 `file://{html}`：当 `--dir .` 时 URL 变成 `file://./_slide_N.html`，Chrome 加载异常。
-
-**已修复**（已写入 `scripts/generate_slides.py`，后续使用无需额外操作）：
-- `--headless` → `--headless=new`
-- 截图 URL 改为 `file://{os.path.abspath(html)}`（绝对路径）
-
-**⚠️ 注意事项**：不要给渲染命令加 `--virtual-time-budget` 并同时保留 CSS 里的 Google Fonts `@import`——两者组合会让 Chrome 无限挂起（实测 4 分钟无产出）。
-
-**验证方法**：渲染后检查 PNG 文件大小——空白页约 29KB，正常内容页 800KB+；也可对图片做暗色文字像素占比检测。
+6. 检查产出文件（`1.png`~`N.png`, `podcast.mp3`, `podcast.ass`, `output.mp4`, `article.md`），并留意终端输出中是否有 `⚠️ WARNING` 幻灯片数不匹配警告
