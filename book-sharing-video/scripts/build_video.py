@@ -33,9 +33,12 @@ VOICE_MAP = {
     "tech":       "zh-CN-YunjianNeural",      # 科技 / 编程 (less common for book sharing)
 }
 
-# Sentence-initial opening punctuation that edge_tts / Azure SentenceBoundary
-# events may strip from the boundary text.
+# Sentence-initial punctuation that edge_tts / Azure SentenceBoundary events
+# may strip from the boundary text. Track opening AND matching closing brackets
+# so we can restore either end, and so the lookup handles all CJK / curly /
+# dash / ellipsis forms in one place.
 OPEN_PUNCT = "《「『（【〈［〔“‘—–…"
+CLOSE_PUNCT = "》」』）】〉］〕”’—–…"
 
 
 def auto_select_voice(topic_hint, text_content):
@@ -78,21 +81,28 @@ def get_audio_duration_ms(audio_file):
 
 def restore_leading_punctuation(boundary_text, source_text):
     """
-    edge_tts / Azure SentenceBoundary events strip sentence-initial opening
-    punctuation (e.g. 《 at the start of a sentence is dropped, leaving only the
-    closing mark). Re-attach it by matching the boundary text back to the source
-    sentence so burned-in subtitles match the audio (which still contains the
-    bracket). Mid-sentence brackets are unaffected.
+    edge_tts / Azure SentenceBoundary events may strip punctuation from the
+    start of the boundary text — most commonly opening brackets like 《,
+    but occasionally closing brackets (》/」/』) if a sentence ends with one,
+    or both ends of a 《…》 pair. Re-attach any punctuation that is present
+    in the source but missing at the front of the boundary text, so burned-in
+    subtitles match the audio (which still contains the bracket). Mid-sentence
+    brackets are unaffected.
     """
     if not boundary_text or not source_text:
         return boundary_text
     if source_text.startswith(boundary_text):
         return boundary_text
     idx = source_text.find(boundary_text)
-    if idx > 0:
-        prefix = source_text[:idx]
-        if all(ch in OPEN_PUNCT for ch in prefix):
-            return prefix + boundary_text
+    if idx <= 0:
+        return boundary_text
+    prefix = source_text[:idx]
+    # If the prefix characters are all punctuation AND the concatenation
+    # recovers a valid leading-prefix of source_text, accept it.
+    if all(ch in OPEN_PUNCT or ch in CLOSE_PUNCT for ch in prefix):
+        candidate = prefix + boundary_text
+        if source_text.startswith(candidate):
+            return candidate
     return boundary_text
 
 
@@ -203,19 +213,42 @@ def split_sentence_into_subcues(text, start_ms, end_ms, max_chunk_len=24):
     return res
 
 
+async def _synthesize_with_retry(clean_script, voice, rate, out_audio, max_retries=3):
+    """TTS synthesis with exponential-backoff retry on transient network failures.
+
+    Returns the list of SentenceBoundary events and writes audio bytes to
+    out_audio. Raises the last error after max_retries.
+    """
+    last_err = None
+    for attempt in range(1, max_retries + 1):
+        boundaries = []
+        try:
+            communicate = edge_tts.Communicate(clean_script, voice, rate=rate, pitch="+0Hz")
+            with open(out_audio, "wb") as audio_f:
+                async for chunk in communicate.stream():
+                    if chunk["type"] == "audio":
+                        audio_f.write(chunk["data"])
+                    elif chunk["type"] == "SentenceBoundary":
+                        boundaries.append(chunk)
+            if os.path.getsize(out_audio) > 0:
+                if attempt > 1:
+                    print(f"   ✓ retry succeeded on attempt {attempt}/{max_retries}")
+                return boundaries
+            raise edge_tts.exceptions.NoAudioReceived("empty audio file")
+        except Exception as e:
+            last_err = e
+            if attempt < max_retries:
+                wait = 2 ** (attempt - 1)
+                print(f"   ⚠️  TTS attempt {attempt}/{max_retries} failed ({type(e).__name__}: {e}); retry in {wait}s...")
+                await asyncio.sleep(wait)
+    raise last_err
+
+
 async def generate_audio_ass_and_slide_durations(script_text, voice, target_num_slides, out_audio, out_ass, rate="+25%"):
     print(f"🎙️ Generating TTS audio with voice [{voice}] (Speed: {rate})...")
     clean_script, sentences_info, effective_num_slides = parse_script_and_slides(script_text, target_num_slides)
 
-    communicate = edge_tts.Communicate(clean_script, voice, rate=rate, pitch="+0Hz")
-    boundaries = []
-
-    with open(out_audio, "wb") as audio_f:
-        async for chunk in communicate.stream():
-            if chunk["type"] == "audio":
-                audio_f.write(chunk["data"])
-            elif chunk["type"] == "SentenceBoundary":
-                boundaries.append(chunk)
+    boundaries = await _synthesize_with_retry(clean_script, voice, rate, out_audio)
 
     print("📝 Generating high-precision ASS subtitles and slide content timings...")
     total_audio_ms = get_audio_duration_ms(out_audio)
@@ -430,6 +463,28 @@ def parse_script_and_slides(script_text, target_num_slides):
     clean_script_text = "\n".join(item["text"] for item in sentences_info)
     max_slide_found = max([item["slide_idx"] for item in sentences_info], default=target_num_slides)
     effective_num_slides = max(target_num_slides, max_slide_found)
+
+    # ── Defensive validation: unbalanced CJK brackets in script ──
+    # Edge_tts may strip opening brackets when emitting SentenceBoundary
+    # events, and restore_leading_punctuation can only re-attach punctuation
+    # that's present in the source. If the script itself is missing a closing
+    # 》 (or 「) the burn-in subtitle will be permanently broken. Warn early
+    # so authors notice before generating a video.
+    bracket_pairs = {
+        '《': '》', '「': '」', '『': '』', '（': '）',
+        '【': '】', '〈': '〉', '［': '］', '〔': '〕',
+    }
+    for s_info in sentences_info:
+        text = s_info["text"]
+        # Strip quotes / dash ellipsis (which can appear without matching end)
+        for op, cl in bracket_pairs.items():
+            opens = text.count(op)
+            closes = text.count(cl)
+            if opens != closes:
+                print(f"⚠️  WARNING: unbalanced '{op}'/'{cl}' in script "
+                      f"(slide {s_info['slide_idx']}, "
+                      f"{opens}× '{op}' vs {closes}× '{cl}'): "
+                      f"{text[:50]}…")
 
     # ── Defensive validation: [SLIDE:] section numbering must match --slides ──
     # A mismatch silently produced broken slide timings (slides with no narration
