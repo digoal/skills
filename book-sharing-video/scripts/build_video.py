@@ -9,6 +9,10 @@ Key differences from content-to-podcast-video/build_video.py:
   - Default avatar: none (no host portrait overlay by default)
   - Subtitle back colour: warm semi-transparent (#282018 at ~63% opacity)
   - Voice selection biased toward warm/storytelling voices for book sharing
+  - Restores sentence-initial opening punctuation (《 「 （ —— …) that edge_tts
+    SentenceBoundary events drop, so subtitles match the audio exactly
+  - Uses -t <audio_duration> instead of -shortest (avoids a deadlock between the
+    concat demuxer and -shortest on some ffmpeg builds)
 """
 
 import os
@@ -29,6 +33,11 @@ VOICE_MAP = {
     "tech":       "zh-CN-YunjianNeural",      # 科技 / 编程 (less common for book sharing)
 }
 
+# Sentence-initial opening punctuation that edge_tts / Azure SentenceBoundary
+# events may strip from the boundary text.
+OPEN_PUNCT = "《「『（【〈［〔“‘—–…"
+
+
 def auto_select_voice(topic_hint, text_content):
     if topic_hint in VOICE_MAP:
         return VOICE_MAP[topic_hint]
@@ -45,12 +54,14 @@ def auto_select_voice(topic_hint, text_content):
     else:
         return VOICE_MAP["literature"]  # Default to warm female voice for book sharing
 
+
 def ms_to_ass(ms):
     s, ms = divmod(int(max(0, ms)), 1000)
     m, s = divmod(s, 60)
     h, m = divmod(m, 60)
     cs = ms // 10
     return f"{h}:{m:02d}:{s:02d}.{cs:02d}"
+
 
 def get_audio_duration_ms(audio_file):
     """Probes exact audio duration in milliseconds using ffmpeg."""
@@ -64,6 +75,27 @@ def get_audio_duration_ms(audio_file):
                 return (int(h) * 3600 + int(mins) * 60 + float(secs)) * 1000
     return 0.0
 
+
+def restore_leading_punctuation(boundary_text, source_text):
+    """
+    edge_tts / Azure SentenceBoundary events strip sentence-initial opening
+    punctuation (e.g. 《 at the start of a sentence is dropped, leaving only the
+    closing mark). Re-attach it by matching the boundary text back to the source
+    sentence so burned-in subtitles match the audio (which still contains the
+    bracket). Mid-sentence brackets are unaffected.
+    """
+    if not boundary_text or not source_text:
+        return boundary_text
+    if source_text.startswith(boundary_text):
+        return boundary_text
+    idx = source_text.find(boundary_text)
+    if idx > 0:
+        prefix = source_text[:idx]
+        if all(ch in OPEN_PUNCT for ch in prefix):
+            return prefix + boundary_text
+    return boundary_text
+
+
 def calc_text_weight(text):
     """Calculates phonetic/reading duration weight for a given text snippet."""
     weight = 0.0
@@ -75,6 +107,7 @@ def calc_text_weight(text):
     pauses_minor = len(re.findall(r'[，；：,;:]', text))
     weight += pauses_major * 1.5 + pauses_minor * 0.8
     return max(0.5, weight)
+
 
 def smart_format_subtitle(text, max_line_len=15):
     """
@@ -120,6 +153,7 @@ def smart_format_subtitle(text, max_line_len=15):
         l3 = ' '.join(lines[2:])
         return f"{l1}\\N{l2}\\N{l3}"
     return "\\N".join(lines)
+
 
 def split_sentence_into_subcues(text, start_ms, end_ms, max_chunk_len=24):
     """
@@ -168,6 +202,7 @@ def split_sentence_into_subcues(text, start_ms, end_ms, max_chunk_len=24):
         c_start = c_end
     return res
 
+
 async def generate_audio_ass_and_slide_durations(script_text, voice, target_num_slides, out_audio, out_ass, rate="+25%"):
     print(f"🎙️ Generating TTS audio with voice [{voice}] (Speed: {rate})...")
     clean_script, sentences_info, effective_num_slides = parse_script_and_slides(script_text, target_num_slides)
@@ -202,7 +237,10 @@ async def generate_audio_ass_and_slide_durations(script_text, voice, target_num_
                 slide_timing[s_idx]["start"] = s_ms
             slide_timing[s_idx]["end"] = e_ms
 
-            sub_cues = split_sentence_into_subcues(b["text"], s_ms, e_ms)
+            # edge_tts boundary text may drop sentence-initial opening punctuation
+            # (《 「 （ —— …); restore it from the source sentence we sent to TTS.
+            btext = restore_leading_punctuation(b["text"], s_info["text"])
+            sub_cues = split_sentence_into_subcues(btext, s_ms, e_ms)
             for chunk_txt, chunk_s_ms, chunk_e_ms in sub_cues:
                 formatted = smart_format_subtitle(chunk_txt, max_line_len=15)
                 if not formatted:
@@ -239,7 +277,7 @@ async def generate_audio_ass_and_slide_durations(script_text, voice, target_num_
     # missing slide's slot into the nearest gap between narrated neighbours
     # (preserving order and non-negative durations). Trailing gaps are placed
     # right after the last narrated slide; the audio is then padded with
-    # silence so those slots survive the -shortest trim in render_video().
+    # silence so those slots survive the -t trim in render_video().
     missing_slides = [i for i in range(1, effective_num_slides + 1)
                       if slide_timing[i]["start"] is None]
     pad_to_ms = 0.0
@@ -283,7 +321,7 @@ async def generate_audio_ass_and_slide_durations(script_text, voice, target_num_
     )
 
     # Pad the audio with silence if placeholder slots extend past the narration,
-    # so trailing placeholder slides survive the -shortest trim in render_video().
+    # so trailing placeholder slides survive the -t trim in render_video().
     if pad_to_ms > total_audio_ms:
         pad_s = (pad_to_ms - total_audio_ms) / 1000.0
         padded_path = out_audio + ".padded.mp3"
@@ -323,6 +361,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
     print(f"✓ ASS Subtitles saved: {out_ass} ({len(dialogues)} cues, exact boundary aligned)")
 
     return slide_timing, effective_num_slides
+
 
 def parse_script_and_slides(script_text, target_num_slides):
     """
@@ -416,6 +455,7 @@ def parse_script_and_slides(script_text, target_num_slides):
 
     return clean_script_text, sentences_info, effective_num_slides
 
+
 def build_concat_file(slide_timing, effective_num_slides, out_dir):
     concat_path = os.path.join(out_dir, "concat.txt")
     lines = []
@@ -437,6 +477,7 @@ def build_concat_file(slide_timing, effective_num_slides, out_dir):
     with open(concat_path, "w", encoding="utf-8") as f:
         f.write("\n".join(lines))
     return concat_path
+
 
 def prepare_avatar_overlay(avatar_path, host_name, host_title, out_dir):
     """
@@ -487,6 +528,14 @@ def prepare_avatar_overlay(avatar_path, host_name, host_title, out_dir):
 def render_video(concat_file, audio_path, ass_path, output_mp4, avatar_card_path=None):
     print("🎬 Rendering MP4 video (natural speed, 24fps)...")
 
+    # Trim to the exact audio duration with -t: some ffmpeg builds deadlock with
+    # concat demuxer + -shortest (the last image's EOF never propagates to stop
+    # the muxer). -t also keeps video/audio perfectly in sync.
+    audio_ms = get_audio_duration_ms(audio_path)
+    if audio_ms <= 0:
+        audio_ms = 10000.0
+    audio_sec = f"{audio_ms / 1000.0:.3f}"
+
     work_dir = os.path.dirname(os.path.abspath(ass_path))
     ass_rel = os.path.basename(ass_path)
     concat_rel = os.path.basename(concat_file)
@@ -514,6 +563,21 @@ def render_video(concat_file, audio_path, ass_path, output_mp4, avatar_card_path
         vf_filter = base_vf
 
     af_filter = "loudnorm"
+    FFMPEG_TIMEOUT = 900  # seconds; guards against any silent ffmpeg hang
+
+    def _build_sw_cmd():
+        return [
+            "ffmpeg", "-y",
+            "-f", "concat", "-safe", "0", "-i", concat_rel,
+            "-i", audio_rel,
+            "-vf", vf_filter,
+            "-c:v", "libx264", "-preset", "medium", "-crf", "22", "-r", "24",
+            "-c:a", "aac", "-ar", "44100", "-ac", "2", "-b:a", "128k",
+            "-af", af_filter,
+            "-t", audio_sec,
+            "-movflags", "+faststart",
+            output_rel
+        ]
 
     def _build_hw_cmd():
         return [
@@ -525,35 +589,35 @@ def render_video(concat_file, audio_path, ass_path, output_mp4, avatar_card_path
             "-c:v", "h264_videotoolbox", "-b:v", "2M", "-r", "24", "-tag:v", "avc1",
             "-c:a", "aac", "-ar", "44100", "-ac", "2", "-b:a", "128k",
             "-af", af_filter,
-            "-shortest",
+            "-t", audio_sec,
             "-movflags", "+faststart",
             output_rel
         ]
 
-    def _build_sw_cmd():
-        return [
-            "ffmpeg", "-y",
-            "-f", "concat", "-safe", "0", "-i", concat_rel,
-            "-i", audio_rel,
-            "-vf", vf_filter,
-            "-c:v", "libx264", "-preset", "medium", "-crf", "22", "-r", "24",
-            "-c:a", "aac", "-ar", "44100", "-ac", "2", "-b:a", "128k",
-            "-af", af_filter,
-            "-shortest",
-            "-movflags", "+faststart",
-            output_rel
-        ]
+    def _run(cmd, label):
+        try:
+            return subprocess.run(cmd, capture_output=True, text=True,
+                                  cwd=work_dir, timeout=FFMPEG_TIMEOUT)
+        except subprocess.TimeoutExpired:
+            print(f"⚠️  {label} timed out after {FFMPEG_TIMEOUT}s")
+            return None
 
-    res = subprocess.run(_build_hw_cmd(), capture_output=True, text=True, cwd=work_dir)
-    if res.returncode == 0:
-        print(f"✅ Video render complete: {os.path.join(work_dir, output_rel)}")
+    # videotoolbox only exists on macOS; on other platforms go straight to
+    # libx264 instead of attempting (and failing) the hardware path.
+    if sys.platform == "darwin":
+        res = _run(_build_hw_cmd(), "videotoolbox hardware encode")
+        if res is not None and res.returncode == 0:
+            print(f"✅ Video render complete: {os.path.join(work_dir, output_rel)}")
+            return
+        print("⚠️  Hardware encode unavailable/failed, retrying with software libx264...")
+
+    res = _run(_build_sw_cmd(), "software libx264 encode")
+    if res is not None and res.returncode == 0:
+        print(f"✅ Software render complete: {os.path.join(work_dir, output_rel)}")
     else:
-        print(f"⚠️ Videotoolbox failed, retrying with software libx264...")
-        res_sw = subprocess.run(_build_sw_cmd(), capture_output=True, text=True, cwd=work_dir)
-        if res_sw.returncode == 0:
-            print(f"✅ Software render complete: {os.path.join(work_dir, output_rel)}")
-        else:
-            print(f"❌ Render failed: {res_sw.stderr}")
+        err = (res.stderr[-1200:] if res is not None else "no ffmpeg output (timeout)")
+        print(f"❌ Render failed: {err}")
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Book Sharing Video Builder")

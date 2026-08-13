@@ -47,13 +47,28 @@ CHROME_CANDIDATES = [
     shutil.which("google-chrome-stable"),
     shutil.which("chromium"),
     shutil.which("chromium-browser"),
+    shutil.which("microsoft-edge"),
+    shutil.which("brave-browser"),
 ]
+
+# Flags needed when running as root / in containers / on CI: headless Chrome
+# refuses to start without a sandbox there. Harmless on normal desktops.
+SANDBOX_FLAGS = ["--no-sandbox", "--disable-dev-shm-usage", "--disable-gpu"]
+
 
 def find_chrome():
     for c in CHROME_CANDIDATES:
         if c and os.path.exists(c):
             return c
     return None
+
+
+def _is_root():
+    try:
+        return os.geteuid() == 0
+    except AttributeError:
+        return False
+
 
 # ─── Warm Book-Style CSS ────────────────────────────────────────────────
 CSS = """
@@ -222,12 +237,14 @@ body {
 </style>
 """
 
+
 def _page(inner, cover=False):
     w = "wrap-cover" if cover else "wrap"
     return (f"<!DOCTYPE html><html><head><meta charset='utf-8'>{CSS}</head>"
             f"<body><div class='bg'></div><div class='grain'></div>"
             f"<div class='deco-line left'></div><div class='deco-line right'></div>"
             f"<div class='{w}'>{inner}</div></body></html>")
+
 
 def _build_cover(s):
     title = s.get("title", "")
@@ -256,6 +273,7 @@ def _build_cover(s):
     </div>""")
     return _page("".join(parts), cover=True)
 
+
 def _build_content(s):
     parts = []
     if s.get("tag"):
@@ -280,8 +298,29 @@ def _build_content(s):
                      f"<div class='card-desc'>{card.get('desc','')}</div></div>")
     return _page("".join(parts), cover=False)
 
+
 def build_slide_html(slide):
     return _build_cover(slide) if slide.get("type") == "cover" else _build_content(slide)
+
+
+def _screenshot_cmds(chrome, png, html_path):
+    """Returns a list of candidate chrome command lines for a screenshot.
+
+    The first entry is the plain headless invocation. When running as root
+    (containers/CI), chrome refuses to start without a sandbox, so we prepend
+    the sandbox-disabling variant as the primary candidate there; otherwise we
+    keep it as a fallback for exotic setups.
+    """
+    base = [
+        chrome, "--headless=new", f"--screenshot={png}",
+        "--window-size=1080,1920", "--hide-scrollbars",
+        "--default-background-color=00000000", f"file://{html_path}"
+    ]
+    sandboxed = base + SANDBOX_FLAGS
+    if _is_root():
+        return [sandboxed, base]
+    return [base, sandboxed]
+
 
 def render_slides(spec, out_dir, chrome=None):
     chrome = chrome or find_chrome()
@@ -296,17 +335,18 @@ def render_slides(spec, out_dir, chrome=None):
         html = os.path.join(out_dir, f"_slide_{i}.html")
         with open(html, "w", encoding="utf-8") as f:
             f.write(build_slide_html(slide))
-        subprocess.run([
-            chrome, "--headless=new", f"--screenshot={png}",
-            "--window-size=1080,1920", "--hide-scrollbars",
-            "--default-background-color=00000000", f"file://{os.path.abspath(html)}"
-        ], capture_output=True, text=True)
+        rendered = False
+        for cmd in _screenshot_cmds(chrome, png, os.path.abspath(html)):
+            subprocess.run(cmd, capture_output=True, text=True)
+            if os.path.exists(png):
+                rendered = True
+                break
         os.remove(html)
-        good = os.path.exists(png)
-        ok += good
-        print(f"  {'✓' if good else '✗'} {i}.png")
+        ok += rendered
+        print(f"  {'✓' if rendered else '✗'} {i}.png")
     print(f"Rendered {ok}/{len(slides)} slides -> {out_dir}")
     return ok
+
 
 def main():
     ap = argparse.ArgumentParser(description="JSON-driven 1080x1920 warm book-style slide generator")
@@ -323,7 +363,10 @@ def main():
         print(f"❌ JSON parsing error in spec file '{args.spec}': {e}")
         print("  💡 Tip: Ensure internal double quotes in text/titles are replaced with Chinese brackets 「 and 」.")
         sys.exit(1)
-    render_slides(spec, args.dir)
+    ok = render_slides(spec, args.dir)
+    if ok < len(spec["slides"] if isinstance(spec, dict) else spec):
+        sys.exit(1)
+
 
 if __name__ == "__main__":
     main()

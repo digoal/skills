@@ -99,6 +99,7 @@ description: 将书籍内容转化为温暖书香风的竖屏读书分享视频�
 - SentenceBoundary 精准对齐
 - 每行 14-16 字，最多 3 行（`\N`）
 - ASS 样式：`Fontsize: 42`, 暖色半透明底框（`BackColour: &HA0282018`）
+- **自动修复句首开括号**：edge_tts 的 SentenceBoundary 事件会丢弃句首的 `《 「 （ ——` 等开括号（如 `《反对本本主义》` 只剩 `反对本本主义》`），`build_video.py` 会从原始句子回溯补回，保证字幕与音频一致
 
 ### Step 3.5: 头像卡片叠加
 
@@ -123,8 +124,8 @@ description: 将书籍内容转化为温暖书香风的竖屏读书分享视频�
 ## 自动化脚本
 
 位于 `scripts/` 目录：
-1. `generate_slides.py`：渲染 1080×1920 暖色调书香风幻灯片
-2. `build_video.py`：TTS 音频（1.0x 语速）+ ASS 字幕 + MP4 视频合成
+1. `generate_slides.py`：渲染 1080×1920 暖色调书香风幻灯片（root/容器环境自动加 `--no-sandbox` 重试）
+2. `build_video.py`：TTS 音频（默认 1.25x 语速）+ ASS 字幕 + MP4 视频合成
 
 ---
 
@@ -138,3 +139,15 @@ description: 将书籍内容转化为温暖书香风的竖屏读书分享视频�
    - `python3 scripts/generate_slides.py --dir <d> --spec <spec.json>`
    - `python3 scripts/build_video.py --script-file <script.txt> --dir <d> --slides <N> --topic literature --avatar none`
 6. 检查产出文件（`1.png`~`N.png`, `podcast.mp3`, `podcast.ass`, `output.mp4`, `article.md`），并留意终端输出中是否有 `⚠️ WARNING` 幻灯片数不匹配警告
+
+---
+
+## 已知问题与自动规避（脚本已内置处理，无需手动干预）
+
+| 问题 | 现象 | 脚本处理 |
+| :--- | :--- | :--- |
+| root/容器环境 Chrome 无沙箱 | 幻灯片渲染失败（`Running as root without --no-sandbox is not supported`） | `generate_slides.py` 自动重试加 `--no-sandbox --disable-dev-shm-usage --disable-gpu` |
+| edge_tts 句边界丢句首开括号 | 字幕缺句首 `《 「 （`（音频正常） | `build_video.py` 从源句回溯补回（`restore_leading_punctuation`） |
+| ffmpeg concat + `-shortest` 死锁 | 视频渲染卡在结尾不结束 | 改用 `-t <音频时长>` 精确裁剪，音画同步且不会挂起 |
+| 非 macOS 平台尝试 videotoolbox | Linux/Windows 上硬编失败日志 | 仅 macOS 走硬件编码，其他平台直接 libx264 |
+| ffmpeg 意外挂起 | 渲染进程无限等待 | 900s 超时保护并给出明确错误 |
