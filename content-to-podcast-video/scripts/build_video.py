@@ -430,11 +430,9 @@ def render_video(concat_file, audio_path, ass_path, output_mp4, avatar_card_path
     output_rel = os.path.basename(output_mp4)
 
     # ── Video filter chain ──────────────────────────────────────────────────
-    # Base: scale + format + subtitles
-    base_vf = f"fps=24,scale=1080:1920,format=yuv420p,subtitles='{ass_rel}'"
-
     # Avatar overlay: bottom-right corner, 20px margin from right, 290px from bottom
     # Card size is 420x220. Position: x=1080-420-20=640, y=1920-220-290=1410
+    # Note: eof_action=repeat ensures the single-frame avatar card repeats smoothly on all video frames without blocking ffmpeg.
     if avatar_card_path and os.path.exists(avatar_card_path):
         target_card = os.path.join(work_dir, "_avatar_card.png")
         if os.path.abspath(avatar_card_path) != os.path.abspath(target_card):
@@ -444,13 +442,14 @@ def render_video(concat_file, audio_path, ass_path, output_mp4, avatar_card_path
                 print(f"⚠️  Could not copy avatar card to work_dir: {e}")
         avatar_rel = os.path.basename(target_card)
         vf_filter = (
-            f"{base_vf} [base]; "
+            f"fps=24,scale=1080:1920,format=yuv420p [base]; "
             f"movie='{avatar_rel}',format=rgba [ovrl]; "
-            f"[base][ovrl] overlay=640:1410"
+            f"[base][ovrl] overlay=640:1410:eof_action=repeat [v_with_avatar]; "
+            f"[v_with_avatar] subtitles='{ass_rel}'"
         )
         print(f"   ✦ Host portrait overlay: bottom-right at (640, 1410)")
     else:
-        vf_filter = base_vf
+        vf_filter = f"fps=24,scale=1080:1920,format=yuv420p,subtitles='{ass_rel}'"
 
     af_filter = "loudnorm"
 
@@ -464,6 +463,7 @@ def render_video(concat_file, audio_path, ass_path, output_mp4, avatar_card_path
             "-c:v", "h264_videotoolbox", "-b:v", "2M", "-r", "24", "-tag:v", "avc1",
             "-c:a", "aac", "-ar", "44100", "-ac", "2", "-b:a", "128k",
             "-af", af_filter,
+            "-max_muxing_queue_size", "1024",
             "-shortest",
             "-movflags", "+faststart",
             output_rel
@@ -475,9 +475,10 @@ def render_video(concat_file, audio_path, ass_path, output_mp4, avatar_card_path
             "-f", "concat", "-safe", "0", "-i", concat_rel,
             "-i", audio_rel,
             "-vf", vf_filter,
-            "-c:v", "libx264", "-preset", "medium", "-crf", "22", "-r", "24",
+            "-c:v", "libx264", "-preset", "veryfast", "-crf", "20", "-r", "24",
             "-c:a", "aac", "-ar", "44100", "-ac", "2", "-b:a", "128k",
             "-af", af_filter,
+            "-max_muxing_queue_size", "1024",
             "-shortest",
             "-movflags", "+faststart",
             output_rel

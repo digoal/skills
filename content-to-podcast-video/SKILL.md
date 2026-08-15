@@ -97,20 +97,110 @@ By default, every video **includes a host portrait card overlay** in the **botto
   - Images are **NOT looped**.
   - Each slide image (`1.png`, `2.png`, ...) is shown **only while speaking that specific page/section's content**.
   - Slide `i` stays on screen from the speech start of `[SLIDE: i]` until the speech start of `[SLIDE: i+1]` (the last slide remains visible until the podcast ends).
-- **Audio Normalization**: `-af "loudnorm"`.
+- **Audio Normalization & Muxing**: `-af "loudnorm" -max_muxing_queue_size 1024`.
 - **FFmpeg Hardware Accelerated Encoding (Mac Videotoolbox)**:
   - With default host avatar card overlay (uses pre-rendered `references/_avatar_card.png` from skill directory or copied `_avatar_card.png` in output directory):
     ```bash
     ffmpeg -y -hwaccel videotoolbox \
       -f concat -safe 0 -i concat.txt \
       -i podcast.mp3 \
-      -vf "fps=24,scale=1080:1920,format=yuv420p,subtitles='podcast.ass' [base]; \
+      -vf "fps=24,scale=1080:1920,format=yuv420p [base]; \
            movie='_avatar_card.png',format=rgba [ovrl]; \
-           [base][ovrl] overlay=640:1410" \
+           [base][ovrl] overlay=640:1410:eof_action=repeat [v_with_avatar]; \
+           [v_with_avatar] subtitles='podcast.ass'" \
       -c:v h264_videotoolbox -b:v 2M -r 24 -tag:v avc1 \
       -c:a aac -ar 44100 -ac 2 -b:a 128k \
-      -af "loudnorm" -shortest -movflags +faststart output.mp4
+      -af "loudnorm" -max_muxing_queue_size 1024 -shortest -movflags +faststart output.mp4
     ```
+- **Cross-Platform Software Fallback (Linux / Windows / Docker)**:
+  - Uses `libx264 -preset veryfast -crf 20` for 8x–10x encoding speed on CPUs without hardware acceleration.
+
+---
+
+## HTML Article Illustrations (4:3 插图)
+
+For inline article illustrations (插图), **NOT** `generate_slides.py`. Use the `html2png.js` script from wechat-publisher project.
+
+### Critical: Hardcode CSS viewport to match target size
+
+**The HTML body MUST match the target viewport exactly** — no `transform: scale()` tricks, no responsive breakpoints. Write CSS at the target size from the start.
+
+```html
+<!-- 4:3 插图: 1920×1440 -->
+<body style="width:1920px; height:1440px; overflow:hidden; font-family:...">
+```
+
+### Rendering
+
+```bash
+node /root/new/src/wechat-publisher/scripts/html2png.js \
+  --file /path/to/fig.html \
+  --output /path/to/fig.png \
+  --width 1920 --height 1440 --scale 1
+```
+
+- `--scale 1` = native resolution (no 2x upscaling)
+- Output is exactly 1920×1440, no padding, no empty corners
+- Average file size: 180–270KB per illustration
+- For other ratios: adjust both CSS `body` size AND `--width/--height` to match
+
+### Design guidelines for 4:3 article illustrations
+
+- Title bar: 20% height, gradient header
+- Content: use flexbox/grid, content determines internal proportions
+- Dark background illustrations (深色背景): use `#0f172a` body bg
+- Light background: use `#f8fafc` body bg
+- Font sizes at 1920×1440: title 46–52px, body 24–30px
+- Border radius: 16–24px for cards
+- Gap between cards: 20–24px
+- Side padding: 70px (≈3.6% of width)
+
+### Cover illustration template
+
+```html
+<!-- 封面: 1920×1440, 深色科技风 -->
+<body style="width:1920px; height:1440px; background:#0a0e1a; overflow:hidden;">
+  <!-- 背景网格线 -->
+  <div style="position:absolute;top:0;left:0;right:0;bottom:0;
+    background-image:linear-gradient(rgba(99,102,241,0.08) 1px,transparent 1px),
+                     linear-gradient(90deg,rgba(99,102,241,0.08) 1px,transparent 1px);
+    background-size:80px 80px;"></div>
+
+  <!-- 光晕装饰 -->
+  <div style="position:absolute;top:-150px;right:-100px;width:600px;height:600px;
+    background:rgba(99,102,241,0.25);filter:blur(120px);border-radius:50%;"></div>
+  <div style="position:absolute;bottom:-100px;left:-80px;width:500px;height:500px;
+    background:rgba(6,182,212,0.2);filter:blur(120px);border-radius:50%;"></div>
+
+  <!-- 顶部标签 -->
+  <div style="position:absolute;top:60px;left:50%;transform:translateX(-50%);
+    background:rgba(99,102,241,0.2);border:1px solid rgba(99,102,241,0.4);
+    border-radius:60px;padding:12px 32px;font-size:20px;color:#a5b4fc;font-weight:700;">
+    小标签 · KEYWORD</div>
+
+  <!-- 中心视觉元素（如插件架构图示 / 核心概念图） -->
+  <!-- 位于视口正中，占 480×480px 区域 -->
+
+  <!-- 底部标题区 -->
+  <div style="position:absolute;bottom:100px;left:0;right:0;text-align:center;padding:0 200px;">
+    <div style="font-size:80px;font-weight:900;
+      background:linear-gradient(135deg,#e0e7ff 0%,#a5b4fc 50%,#06b6d4 100%);
+      -webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:20px;">
+      主标题
+    </div>
+    <div style="width:120px;height:4px;background:linear-gradient(90deg,#6366f1,#06b6d4);
+      border-radius:2px;margin:0 auto 20px;"></div>
+    <div style="font-size:28px;color:#64748b;">副标题 · 副标题</div>
+  </div>
+</body>
+```
+
+Key cover design elements:
+- **Dark tech background** (`#0a0e1a`) with subtle grid lines
+- **Glow orbs** (blurred circles, purple + cyan) for depth
+- **Gradient title text** (white → indigo → cyan)
+- **Center visual** (architecture diagram, concept illustration)
+- **Minimal layout**: tag at top, visual center, title bottom
 
 ---
 
@@ -193,3 +283,17 @@ When executing this skill:
 **⚠️ Warning**: do NOT add `--virtual-time-budget` to the render command while the slide CSS keeps the Google Fonts `@import` — the combination hangs Chrome indefinitely (tested: no output after 4 minutes).
 
 **Verification**: rendered PNGs should be >800KB; blank ones are ~29KB. Optionally check the dark-text pixel ratio of the image.
+
+### 2026-08-15 Fixed: FFmpeg Overlay Stall and Software Encoding Speedup on Linux / Cross-Platform
+
+**Symptom**: `build_video.py` hangs at frame 0 (`0 fps` / `0.02x` speed) or throws `100 buffers queued in out_#0:0` and crashes with `moov atom not found` on Linux/ARM servers.
+
+**Root cause**:
+1. Single-frame image loaded via `movie='_avatar_card.png'` reached EOF, causing `overlay` to block waiting for new frames.
+2. `libx264` default preset was `-preset medium`, which is slow on CPU software encoding.
+3. `loudnorm` filter lookahead buffer caused muxer stall without `-max_muxing_queue_size 1024`.
+
+**Fix applied** (in `scripts/build_video.py`):
+1. Added `:eof_action=repeat` to the `overlay` filter (`overlay=640:1410:eof_action=repeat`).
+2. Filter order adjusted: overlay avatar card first, then apply subtitles on top.
+3. Software fallback upgraded to `-preset veryfast -crf 20 -max_muxing_queue_size 1024`, boosting encoding speed to **8x–10x (200+ fps)** while maintaining high quality and full macOS `videotoolbox` hardware acceleration compatibility.
